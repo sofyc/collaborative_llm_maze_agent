@@ -3,6 +3,7 @@ base,"I'm agent $AGENT_NAME$. I'm searching in a $ROW$x$COL$ maze with other age
 Goal: $GOAL$
 Current Position: $CURRENT_POSITION$
 Next Possible Positions: $NEXT_POSSIBLE_POSITION$
+Dead End: $DEAD_END$
 Observation: $OBSERVATION$
 Progress: $PROGRESS$
 Dialogue history:
@@ -17,6 +18,7 @@ gen,"I'm agent $AGENT_NAME$. I'm searching in a maze with other agents $OTHER_AG
 Goal: $GOAL$
 Current Position: $CURRENT_POSITION$
 Next Possible Positions: $NEXT_POSSIBLE_POSITION$
+Dead End: $DEAD_END$
 Observation: $OBSERVATION$
 Progress: $PROGRESS$
 Dialogue history:

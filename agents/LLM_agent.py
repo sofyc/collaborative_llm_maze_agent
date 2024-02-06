@@ -73,10 +73,11 @@ class llm_agent:
 
 		prompt = self.action_prompt_template.replace("$CURRENT_POSITION$", str(self._mazeAgent.position))
 		prompt = prompt.replace("$NEXT_POSSIBLE_POSITION$", str(self._mazeAgent._look()[0])[1:-1])
-		prompt = prompt.replace("$PROGRESS$", f"{self._mazeAgent._parentMaze.score}/{self._mazeAgent._parentMaze.num_items} items found")
-		prompt = prompt.replace("$AVAILABLE_ACTIONS$", plans)
 		prompt = prompt.replace("$OBSERVATION$", self.obs + str(self._mazeAgent.find_item()))
+		prompt = prompt.replace("$DEAD_END$", ", ".join([str(i) for i in self._mazeAgent._parentMaze.dead_end]))
+		prompt = prompt.replace("$PROGRESS$", f"{self._mazeAgent._parentMaze.score}/{self._mazeAgent._parentMaze.num_items} items found")
 		prompt = prompt.replace("$ACTION_HISTORY$", ", ".join(self.action_history[-10:]))
+		prompt = prompt.replace("$AVAILABLE_ACTIONS$", plans)
 
 		if self.args.communication == "direct":
 			prompt = prompt.replace("$DIALOGUE_HISTORY$", "\n".join(self._mazeAgent._parentMaze.dialogue_history))
@@ -87,10 +88,10 @@ class llm_agent:
 
 		prompt = self.message_prompt_template.replace("$CURRENT_POSITION$", str(self._mazeAgent.position))
 		prompt = prompt.replace("$NEXT_POSSIBLE_POSITION$", str(self._mazeAgent._look()[0])[1:-1])
-		prompt = prompt.replace("$PROGRESS$", f"{self._mazeAgent._parentMaze.score}/{self._mazeAgent._parentMaze.num_items} items found")
 		prompt = prompt.replace("$OBSERVATION$", str(self._mazeAgent.find_item()))
+		prompt = prompt.replace("$DEAD_END$", ", ".join([str(i) for i in self._mazeAgent._parentMaze.dead_end]))
+		prompt = prompt.replace("$PROGRESS$", f"{self._mazeAgent._parentMaze.score}/{self._mazeAgent._parentMaze.num_items} items found")
 		prompt = prompt.replace("$DIALOGUE_HISTORY$", ", ".join(self._mazeAgent._parentMaze.dialogue_history))
-		prompt = prompt.replace("$ACTION_HISTORY$", "\n".join(self.action_history[-10:]))
 		prompt = prompt + f"\n{self.agent_name}:"
 
 		return prompt

@@ -1,8 +1,9 @@
 type,prompt
-base,"I'm $AGENT_NAME$. I'm searching in a $ROW$x$COL$ maze. Given my goal, and my progress and previous actions, please help me choose the best available action to achieve the goal as soon as possible. Explore new areas as much as possible, avoid repeatedly exploring the same place.
+base,"I'm $AGENT_NAME$. I'm searching in a $ROW$x$COL$ maze. Given my goal, and my progress and previous actions, please help me choose the best available action to achieve the goal as soon as possible. Explore new areas as much as possible, avoid repeatedly exploring the same place. Avoid exploring dead ends.
 Goal: $GOAL$
 Current Position: $CURRENT_POSITION$
 Next Possible Positions: $NEXT_POSSIBLE_POSITION$
+Dead End: $DEAD_END$
 Observation: $OBSERVATION$
 Progress: $PROGRESS$
 Previous actions: $ACTION_HISTORY$
