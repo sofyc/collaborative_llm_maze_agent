@@ -256,22 +256,7 @@ class agent:
             self.y=self.y
     
     def _look(self):
-        x, y = self.position
-        possible_next_positions = []
-        possible_next_directions = []
-        if self._parentMaze.maze_map[self.position]["E"]:
-            possible_next_positions.append((x, y + 1))
-            possible_next_directions.append("Right")
-        if self._parentMaze.maze_map[self.position]["W"]:
-            possible_next_positions.append((x, y - 1))
-            possible_next_directions.append("Left")
-        if self._parentMaze.maze_map[self.position]["N"]:
-            possible_next_positions.append((x - 1, y))
-            possible_next_directions.append("Up")
-        if self._parentMaze.maze_map[self.position]["S"]:
-            possible_next_positions.append((x + 1, y))
-            possible_next_directions.append("Down")
-        return possible_next_positions, possible_next_directions
+        return self._parentMaze.find_neighbors(self.position)
 
     def look(self) -> str:
         possible_next_positions, possible_next_directions = self._look()
@@ -297,8 +282,13 @@ class agent:
         ]
         if (x, y) not in self._look()[0]:
             return f"Move failed. Possible next positions are " + ", ".join([str(p) for p in self._look()[0]])
+        neighbors = self._parentMaze.find_neighbors((x, y))[0]
+        if len(neighbors) == len(set(neighbors) & self._parentMaze.dead_end) + 1:
+            self._parentMaze.add_dead_end((x, y))
+
         self.position = (x, y)
         self._path.append((x, y))
+
         if self._parentMaze.visual:
             self._parentMaze._win.update()
         if self.position in self._parentMaze.item_positions:
@@ -453,6 +443,46 @@ class maze:
         self.score=0
         self.finish = False
         self.dialogue_history = []
+        self.dead_end = set()
+    
+    def find_neighbors(self,position):
+        x, y = position
+        possible_next_positions = []
+        possible_next_directions = []
+        if self.maze_map[position]["E"]:
+            possible_next_positions.append((x, y + 1))
+            possible_next_directions.append("Right")
+        if self.maze_map[position]["W"]:
+            possible_next_positions.append((x, y - 1))
+            possible_next_directions.append("Left")
+        if self.maze_map[position]["N"]:
+            possible_next_positions.append((x - 1, y))
+            possible_next_directions.append("Up")
+        if self.maze_map[position]["S"]:
+            possible_next_positions.append((x + 1, y))
+            possible_next_directions.append("Down")
+        
+        return possible_next_positions, possible_next_directions
+
+    def add_dead_end(self,position):
+        self.dead_end.add(position)
+        if self.visual:
+            agent(self,*position,shape='square',filled=True,color=COLOR.red)
+
+    @property
+    def grid(self):
+        return self._grid
+    @grid.setter        
+    def grid(self,n):
+        self._grid=[]
+        y=0
+        for n in range(self.cols):
+            x = 1
+            y = 1+y
+            for m in range(self.rows):
+                self.grid.append((x,y))
+                self.maze_map[x,y]={'E':0,'W':0,'N':0,'S':0}
+                x = x + 1 
 
     @property
     def grid(self):
@@ -758,7 +788,8 @@ class maze:
 
         if self.visual:
             self._drawMaze(self.theme)
-        agent(self,*self._goal,shape='square',filled=True,color=COLOR.green)
+            agent(self,*self._goal,shape='square',filled=True,color=COLOR.green)
+
         if saveMaze:
             dt_string = datetime.datetime.now().strftime("%Y-%m-%d--%H-%M-%S")
             with open(f'maze--{dt_string}.csv','w',newline='') as f:

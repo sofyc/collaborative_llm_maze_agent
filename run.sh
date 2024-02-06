@@ -1,8 +1,8 @@
 python run_maze.py \
---rows 5 \
---columns 5 \
---agent_type dfs \
---num_agents 4 \
+--rows 10 \
+--columns 10 \
+--agent_type llm \
+--num_agents 1 \
 --num_items 4 \
 --visual \
 --communication no \
