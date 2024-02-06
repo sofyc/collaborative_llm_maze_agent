@@ -17,7 +17,7 @@ class base_agent:
 		available_positions = self._mazeAgent._look()[0]
 
 		for position in available_positions:
-			if position not in self.visited:
+			if position not in self.visited and position not in self._mazeAgent._parentMaze.dead_end:
 				self.visited.add(position)
 				self.history_locations.append(position)
 				info = {"position": position}

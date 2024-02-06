@@ -1,9 +1,9 @@
 python run_maze.py \
---rows 10 \
---columns 10 \
---agent_type llm \
---num_agents 1 \
---num_items 4 \
+--rows 20 \
+--columns 20 \
+--agent_type dfs \
+--num_agents 4 \
+--num_items 10 \
 --visual \
 --communication no \
 --prompt_template_path agents/prompt_single.csv \

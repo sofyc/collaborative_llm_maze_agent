@@ -51,7 +51,7 @@ if args.visual:
     time.sleep(0.5)
 
 finish = False
-for r in range(500):
+for r in range(2000):
     for it, agent in enumerate(agents):
         action, info = agent.run()
         agent.step(action)
