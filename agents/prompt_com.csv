@@ -1,0 +1,27 @@
+type,prompt
+base,"I'm agent $AGENT_NAME$. I'm searching in a $ROW$x$COL$ maze with other agents $OTHER_AGENT_NAME$. Given our shared goal, dialogue history, and my progress and previous actions, please help me choose the best available action to achieve the goal as soon as possible.
+Goal: $GOAL$
+Current Position: $CURRENT_POSITION$
+Next Possible Positions: $NEXT_POSSIBLE_POSITION$
+Observation: $OBSERVATION$
+Progress: $PROGRESS$
+Dialogue history:
+$INITIAL_DIALOGUE$
+$DIALOGUE_HISTORY$
+Previous actions: $ACTION_HISTORY$
+Available actions:
+$AVAILABLE_ACTIONS$
+Answer:"
+goal,"Find all the items in the maze."
+gen,"I'm agent $AGENT_NAME$. I'm searching in a maze with other agents $OTHER_AGENT_NAME$. Given our shared goal, dialogue history, and my progress and previous actions, please help me generate a short message to send to $OTHER_AGENT_NAME$ to help us achieve the goal as soon as possible.
+Goal: $GOAL$
+Current Position: $CURRENT_POSITION$
+Next Possible Positions: $NEXT_POSSIBLE_POSITION$
+Observation: $OBSERVATION$
+Progress: $PROGRESS$
+Dialogue history:
+$INITIAL_DIALOGUE$
+$DIALOGUE_HISTORY$
+
+Note: The generated message should be accurate, helpful and brief. Do not generate repetitive messages.
+"
