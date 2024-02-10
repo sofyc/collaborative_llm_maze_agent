@@ -1,8 +1,6 @@
 type,prompt
-base,"I'm agent $AGENT_NAME$. I'm searching in a $ROW$x$COL$ maze with other agents $OTHER_AGENT_NAME$. Given our shared goal, dialogue history, and my progress and previous actions, please help me choose the best available action to achieve the goal as soon as possible.
+base,"I'm agent $AGENT_NAME$. I'm searching in a $ROW$x$COL$ maze with other agents $OTHER_AGENT_NAME$. Given our shared goal, dead end, my observation, progress, dialogue history and my previous actions, please help me choose the best available action to achieve the goal as soon as possible. Explore new areas as much as possible, avoid repeating previous actions and avoid exploring dead end.
 Goal: $GOAL$
-Current Position: $CURRENT_POSITION$
-Next Possible Positions: $NEXT_POSSIBLE_POSITION$
 Dead End: $DEAD_END$
 Observation: $OBSERVATION$
 Progress: $PROGRESS$
@@ -14,10 +12,8 @@ Available actions:
 $AVAILABLE_ACTIONS$
 Answer:"
 goal,"Find all the items in the maze."
-gen,"I'm agent $AGENT_NAME$. I'm searching in a maze with other agents $OTHER_AGENT_NAME$. Given our shared goal, dialogue history, and my progress and previous actions, please help me generate a short message to send to $OTHER_AGENT_NAME$ to help us achieve the goal as soon as possible.
+gen,"I'm agent $AGENT_NAME$. I'm searching in a $ROW$x$COL$ maze with other agents $OTHER_AGENT_NAME$. Given our shared goal, dead end, my observation, progress, dialogue history and my previous actions, please help me generate a short message to send to $OTHER_AGENT_NAME$ to help us achieve the goal as soon as possible. Explore new areas as much as possible, avoid repeating previous actions and avoid exploring dead end.
 Goal: $GOAL$
-Current Position: $CURRENT_POSITION$
-Next Possible Positions: $NEXT_POSSIBLE_POSITION$
 Dead End: $DEAD_END$
 Observation: $OBSERVATION$
 Progress: $PROGRESS$

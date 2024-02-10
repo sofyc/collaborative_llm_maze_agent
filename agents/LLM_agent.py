@@ -16,7 +16,7 @@ class llm_agent:
 		self.args = args
 		self.total_cost = 0
 		self.steps = 0
-		self.obs = ""
+		self.obs = self._mazeAgent.move(str(self._mazeAgent.position))
 		self.last_action = None
 		self.LLM = LLM(self.lm_id, self.communication, self.agent_id)
 		self.prompt_template_path = args.prompt_template_path
@@ -57,7 +57,8 @@ class llm_agent:
 			# txt = text.lower()
 			if f"option {option}" in text or f"{option}." in text.split(' ') or f"{option}," in text.split(' ') or f"Option {option}" in text or f"({option})" in text:
 				return action
-		print("WARNING! Fuzzy match!")
+		if self.args.debug:
+			print("WARNING! Fuzzy match!")
 		for i in range(len(available_actions)):
 			action = available_actions[i]
 			if self.communication and i == 0:
@@ -66,15 +67,17 @@ class llm_agent:
 			option = chr(ord('A') + i)
 			if f"{option} " in text or act in text or name in text or id in text:
 				return action
-		print("WARNING! No available action parsed!!! Random choose one")
+		if self.args.debug:
+			print("WARNING! No available action parsed!!! Random choose one")
 		return random.choice(available_actions)
 
 	def build_action_prompt(self, plans):
 
-		prompt = self.action_prompt_template.replace("$CURRENT_POSITION$", str(self._mazeAgent.position))
-		prompt = prompt.replace("$NEXT_POSSIBLE_POSITION$", str(self._mazeAgent._look()[0])[1:-1])
-		prompt = prompt.replace("$OBSERVATION$", self.obs + str(self._mazeAgent.find_item()))
-		prompt = prompt.replace("$DEAD_END$", ", ".join([str(i) for i in self._mazeAgent._parentMaze.dead_end]))
+		prompt = self.action_prompt_template.replace("$OBSERVATION$", self.obs + str(self._mazeAgent.find_item()))
+		if len(set(self._mazeAgent._parentMaze.dead_end).intersection(set(self._mazeAgent._look()[0]))) == 0:
+			prompt = prompt.replace("$DEAD_END$", "None")
+		else:
+			prompt = prompt.replace("$DEAD_END$", ", ".join([str(i) for i in list(set(self._mazeAgent._parentMaze.dead_end).intersection(set(self._mazeAgent._look()[0])))]))
 		prompt = prompt.replace("$PROGRESS$", f"{self._mazeAgent._parentMaze.score}/{self._mazeAgent._parentMaze.num_items} items found")
 		prompt = prompt.replace("$ACTION_HISTORY$", ", ".join(self.action_history[-10:]))
 		prompt = prompt.replace("$AVAILABLE_ACTIONS$", plans)
@@ -86,10 +89,11 @@ class llm_agent:
 
 	def build_message_prompt(self):
 
-		prompt = self.message_prompt_template.replace("$CURRENT_POSITION$", str(self._mazeAgent.position))
-		prompt = prompt.replace("$NEXT_POSSIBLE_POSITION$", str(self._mazeAgent._look()[0])[1:-1])
-		prompt = prompt.replace("$OBSERVATION$", str(self._mazeAgent.find_item()))
-		prompt = prompt.replace("$DEAD_END$", ", ".join([str(i) for i in self._mazeAgent._parentMaze.dead_end]))
+		prompt = self.message_prompt_template.replace("$OBSERVATION$", self.obs + str(self._mazeAgent.find_item()))
+		if len(set(self._mazeAgent._parentMaze.dead_end).intersection(set(self._mazeAgent._look()[0]))) == 0:
+			prompt = prompt.replace("$DEAD_END$", "None")
+		else:
+			prompt = prompt.replace("$DEAD_END$", ", ".join([str(i) for i in list(set(self._mazeAgent._parentMaze.dead_end).intersection(set(self._mazeAgent._look()[0])))]))
 		prompt = prompt.replace("$PROGRESS$", f"{self._mazeAgent._parentMaze.score}/{self._mazeAgent._parentMaze.num_items} items found")
 		prompt = prompt.replace("$DIALOGUE_HISTORY$", ", ".join(self._mazeAgent._parentMaze.dialogue_history))
 		prompt = prompt + f"\n{self.agent_name}:"
@@ -111,7 +115,21 @@ class llm_agent:
 		# 			self.dialogue_history.append(f"{self.agent_names[i + 1]}: {observation['messages'][i]}")
 		info = {}
 
-		if self.args.communication == "direct":
+		# if self.args.communication == "direct":
+		# 	message_prompt = self.build_message_prompt()
+		# 	chat_prompt = [{"role": "user", "content": message_prompt}]
+		# 	outputs, usage = self.LLM.generate(chat_prompt, self.sampling_params)
+		# 	self.total_cost += usage
+		# 	message = outputs[0]
+		# 	info['message_generator_prompt'] = message_prompt
+		# 	info['message_generator_outputs'] = outputs
+		# 	info['message_generator_usage'] = usage
+
+		available_actions = ["[MOVE] " + str(i) for i in self._mazeAgent._look()[0]]
+
+		if self.action_history[-1].startswith("[SEND MESSAGE]") or self.args.communication == "no":
+			pass
+		else:
 			message_prompt = self.build_message_prompt()
 			chat_prompt = [{"role": "user", "content": message_prompt}]
 			outputs, usage = self.LLM.generate(chat_prompt, self.sampling_params)
@@ -120,11 +138,7 @@ class llm_agent:
 			info['message_generator_prompt'] = message_prompt
 			info['message_generator_outputs'] = outputs
 			info['message_generator_usage'] = usage
-
-		if self.action_history[-1].startswith("[SEND MESSAGE]") or self.args.communication == "no":
-			available_actions = ["[MOVE] " + str(i) for i in self._mazeAgent._look()[0]]
-		else:
-			available_actions = ["[SEND MESSAGE] " + message] + ["[MOVE] " + str(i) for i in self._mazeAgent._look()[0]]
+			available_actions = ["[SEND MESSAGE] " + message] + available_actions
 
 		plans = ""
 		for i, plan in enumerate(available_actions):
@@ -159,9 +173,10 @@ class llm_agent:
 		action = self.parse_answer(available_actions, action)
 		info.update({"action": action, "total_cost": self.total_cost})
 
-		for key, value in info.items():
-			print(key)
-			print(value)
+		if self.args.debug:
+			for key, value in info.items():
+				print(key)
+				print(value)
 		
 		return action, info
 
@@ -172,9 +187,9 @@ class llm_agent:
 			if LM_times > 3:
 				raise Exception(f"retrying LM_plan too many times")
 			action, a_info = self.get_action()
-			if action is None:
-				print("No more things to do!")
-				action = f"[wait]"
+			# if action is None:
+			# 	print("No more things to do!")
+			# 	action = f"[wait]"
 
 			self.action = action
 			self.action_history.append('[SEND MESSAGE]' if action.startswith('[SEND MESSAGE]') else action)
@@ -186,16 +201,18 @@ class llm_agent:
 		else:
 			self.stuck = 0
 		self.last_action = action
-	
+
+		self.step(action)
+
 		return action, a_info
 
-	def reset(self, obs, containers_name, goal_objects_name, rooms_name, room_info, goal):
-		self.steps = 0
+	# def reset(self, obs, containers_name, goal_objects_name, rooms_name, room_info, goal):
+	# 	self.steps = 0
 
-		self.plan = None
-		self.action_history = [f"[goexplore] <{self.current_room['class_name']}> ({self.current_room['id']})"]
-		self.dialogue_history = []
-		self.LLM.reset(self.rooms_name, self.roomname2id, self.goal_location, self.unsatisfied)
+	# 	self.plan = None
+	# 	self.action_history = [f"[goexplore] <{self.current_room['class_name']}> ({self.current_room['id']})"]
+	# 	self.dialogue_history = []
+	# 	self.LLM.reset(self.rooms_name, self.roomname2id, self.goal_location, self.unsatisfied)
 	
 	def step(self, action):
 		

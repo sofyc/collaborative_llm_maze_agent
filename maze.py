@@ -55,7 +55,7 @@ class agent:
     Or they can be the physical agents (like robots)
     They can have two shapes (square or arrow)
     '''
-    def __init__(self,parentMaze,x=None,y=None,shape='square',goal=None,filled=False,footprints=False,color:COLOR=COLOR.blue):
+    def __init__(self,parentMaze,x=None,y=None,shape='square',goal=None,filled=False,footprints=False,color:COLOR=COLOR.blue,control=False):
         '''
         parentmaze-->  The maze on which agent is placed.
         x,y-->  Position of the agent i.e. cell inside which agent will be placed
@@ -80,6 +80,7 @@ class agent:
         '''
         self._parentMaze=parentMaze
         self.color=color
+        self.control=control
         if(isinstance(color,str)):
             if(color in COLOR.__members__):
                 self.color=COLOR[color]
@@ -93,7 +94,8 @@ class agent:
         self.x=x
         self.y=y
         self.footprints=footprints
-        self._parentMaze._agents.append(self)
+        if self.control:
+            self._parentMaze._agents.append(self)
         if goal==None:
             self.goal=self._parentMaze._goal
         else:
@@ -280,11 +282,13 @@ class agent:
         x, y = [
             int(p.strip()) for p in next_pos.strip().lstrip("(").rstrip(")").split(",")
         ]
-        if (x, y) not in self._look()[0]:
+        if (x, y) not in self._look()[0] and (x, y) != self.position:
             return f"Move failed. Possible next positions are " + ", ".join([str(p) for p in self._look()[0]])
         neighbors = self._parentMaze.find_neighbors((x, y))[0]
-        if len(neighbors) == len(set(neighbors) & self._parentMaze.dead_end) + 1:
-            self._parentMaze.add_dead_end((x, y))
+        
+        if self._parentMaze.remember_dead_end:
+            if len(neighbors) == len(set(neighbors) & self._parentMaze.dead_end) + 1:
+                self._parentMaze.add_dead_end((x, y))
 
         self.position = (x, y)
         self._path.append((x, y))
@@ -409,7 +413,7 @@ class maze:
     '''
     This is the main class to create maze.
     '''
-    def __init__(self,rows=10,cols=10,visual=False):
+    def __init__(self,rows=10,cols=10,visual=False,remember_dead_end=False):
         '''
         rows--> No. of rows of the maze
         cols--> No. of columns of the maze
@@ -444,6 +448,7 @@ class maze:
         self.finish = False
         self.dialogue_history = []
         self.dead_end = set()
+        self.remember_dead_end = remember_dead_end
     
     def find_neighbors(self,position):
         x, y = position
@@ -469,6 +474,9 @@ class maze:
         if self.visual:
             agent(self,*position,shape='square',filled=True,color=COLOR.red)
 
+    @property
+    def agent_positions(self):
+        return [a.position for a in self._agents]
     @property
     def grid(self):
         return self._grid
@@ -533,7 +541,7 @@ class maze:
         for i in range(num_items):
             self.item_agents[self.item_positions[i]] = agent(self, x=self.item_positions[i][0], y=self.item_positions[i][1], shape="square", footprints=True, color=color)
 
-    def CreateMaze(self,x=1,y=1,pattern=None,loopPercent=0,saveMaze=False,loadMaze=None,theme:COLOR=COLOR.dark):
+    def CreateMaze(self,x=1,y=1,pattern=None,loopPercent=0,saveMaze=False,loadMaze=None,theme:COLOR=COLOR.dark,seed=None):
         '''
         One very important function to create a Random Maze
         pattern-->  It can be 'v' for vertical or 'h' for horizontal
@@ -791,8 +799,9 @@ class maze:
             agent(self,*self._goal,shape='square',filled=True,color=COLOR.green)
 
         if saveMaze:
-            dt_string = datetime.datetime.now().strftime("%Y-%m-%d--%H-%M-%S")
-            with open(f'maze--{dt_string}.csv','w',newline='') as f:
+            # dt_string = datetime.datetime.now().strftime("%Y-%m-%d--%H-%M-%S")
+            with open(f'maze-{self.rows}-{self.cols}-{seed}.csv','w',newline='') as f:
+            # with open(f'maze--{dt_string}.csv','w',newline='') as f:
                 writer=csv.writer(f)
                 writer.writerow(['  cell  ','E','W','N','S'])
                 for k,v in self.maze_map.items():
