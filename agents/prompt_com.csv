@@ -1,7 +1,13 @@
 type,prompt
-base,"I'm agent $AGENT_NAME$. I'm searching in a $ROW$x$COL$ maze with other agents $OTHER_AGENT_NAME$. Given our shared goal, dead end, my observation, progress, dialogue history and my previous actions, please help me choose the best available action to achieve the goal as soon as possible. Explore new areas as much as possible, avoid repeating previous actions and avoid exploring dead end.
+base,"I'm agent $AGENT_NAME$. I'm searching in a $ROW$x$COL$ maze with other agents $OTHER_AGENT_NAME$. My visibility is limited to the surrounding four positions. Given our shared goal, my dead end, others' dead end, my observation, progress, dialogue history, and my previous actions, please help me choose the best available action to achieve the goal as soon as possible.
+Here are some rules to search the maze, you must examine these rules one by one when choosing actions:
+1. Never move to my dead end.
+2. Only move to others' dead ends if I am surrounded by dead ends.
+3. If I have a new position (not dead end) to explore, always move there.
+4. When I encounter a fork in the maze, try to take a different path from other agents to explore new positions.
 Goal: $GOAL$
-Dead End: $DEAD_END$
+My Dead End: $YOUR_DEAD_END$
+Others' Dead End: $OTHER_DEAD_END$
 Observation: $OBSERVATION$
 Progress: $PROGRESS$
 Dialogue history:
@@ -10,11 +16,14 @@ $DIALOGUE_HISTORY$
 Previous actions: $ACTION_HISTORY$
 Available actions:
 $AVAILABLE_ACTIONS$
+
+Note: Remember to include the letter option you choose in answer.
+
 Answer:"
 goal,"Find all the items in the maze."
-gen,"I'm agent $AGENT_NAME$. I'm searching in a $ROW$x$COL$ maze with other agents $OTHER_AGENT_NAME$. Given our shared goal, dead end, my observation, progress, dialogue history and my previous actions, please help me generate a short message to send to $OTHER_AGENT_NAME$ to help us achieve the goal as soon as possible. Explore new areas as much as possible, avoid repeating previous actions and avoid exploring dead end.
+gen,"I'm agent $AGENT_NAME$. I'm searching in a $ROW$x$COL$ maze with other agents $OTHER_AGENT_NAME$. My visibility is limited to the surrounding four positions. Given our shared goal, my dead end, my observation, progress, dialogue history, and my previous actions, please help me generate a short message to send to $OTHER_AGENT_NAME$ to help us achieve the goal as soon as possible.
 Goal: $GOAL$
-Dead End: $DEAD_END$
+My Dead End: $YOUR_DEAD_END$
 Observation: $OBSERVATION$
 Progress: $PROGRESS$
 Dialogue history:

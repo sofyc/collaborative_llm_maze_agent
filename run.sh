@@ -1,4 +1,4 @@
-for maze in {1..1}
+for maze in {2..5}
 do
     python run_maze.py \
     --rows 10 \
@@ -9,7 +9,7 @@ do
     --num_agents 4 \
     --num_items 4 \
     --visual \
-    --communication direct \
+    --communication always \
     --prompt_template_path agents/prompt_com.csv \
     --debug \
     --remember_dead_end \

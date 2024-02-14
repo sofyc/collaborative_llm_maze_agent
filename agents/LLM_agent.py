@@ -6,43 +6,44 @@ class llm_agent:
 	"""
 	LLM agent class
 	"""
-	def __init__(self, maze_agent, agent_id, args):
+	def __init__(self, maze_agent, agent_id):
 		self._mazeAgent = maze_agent
+		self.args = self._mazeAgent.args
 		self.agent_id = agent_id
 		self.agent_name = id2name[agent_id]
-		self.other_agent_name = id2name[:agent_id] + id2name[agent_id+1:args.num_agents]
-		self.lm_id = args.agent_lm_id
-		self.communication = args.communication
-		self.args = args
+		self.other_agent_name = id2name[:agent_id] + id2name[agent_id+1:self.args.num_agents]
+		self.lm_id = self.args.agent_lm_id
+		self.communication = self.args.communication
 		self.total_cost = 0
 		self.steps = 0
 		self.obs = self._mazeAgent.move(str(self._mazeAgent.position))
 		self.last_action = None
 		self.LLM = LLM(self.lm_id, self.communication, self.agent_id)
-		self.prompt_template_path = args.prompt_template_path
+		self.prompt_template_path = self.args.prompt_template_path
 		self.action_history = ["[MOVE] " + str(self._mazeAgent.position)]
+		self.agent_info = {}
 		
 		df = pd.read_csv(self.prompt_template_path)
 		self.goal = df['prompt'][1]
-		self.action_prompt_template = df['prompt'][0].replace("$AGENT_NAME$", str(self.agent_name)).replace("$GOAL$", self.goal).replace("$ROW$", str(args.rows)).replace("$COL$", str(args.columns))
-		if args.communication == "direct":
-			self.message_prompt_template = df['prompt'][2].replace("$AGENT_NAME$", str(self.agent_name)).replace("$GOAL$", self.goal).replace("$ROW$", str(args.rows)).replace("$COL$", str(args.columns))
+		self.action_prompt_template = df['prompt'][0].replace("$AGENT_NAME$", str(self.agent_name)).replace("$GOAL$", self.goal).replace("$ROW$", str(self.args.rows)).replace("$COL$", str(self.args.columns))
+		if self.args.communication == "direct" or self.args.communication == "always":
+			self.message_prompt_template = df['prompt'][2].replace("$AGENT_NAME$", str(self.agent_name)).replace("$GOAL$", self.goal).replace("$ROW$", str(self.args.rows)).replace("$COL$", str(self.args.columns))
 			initial_dialogue = ""
 			for i in range(self.args.num_agents):
 
 				if i == 0:
-					initial_dialogue += id2name[i] + ": Hello everyone, I'll let you know if I find any goal objects and finish any subgoals, and ask for your help when necessary.\n"
+					initial_dialogue += id2name[i] + ": Hello everyone, I'll tell you my position and dead end I found, please try to avoid dead end and explore new positions as much as possible.\n"
 				else:
-					initial_dialogue += id2name[i] + ": Thanks! I'll let you know if I find any goal objects and finish any subgoals, and ask for your help when necessary.\n"
+					initial_dialogue += id2name[i] + ": Thanks! I'll tell you my position and dead end I found, let's try to avoid dead end and explore new positions as much as possible.\n"
 
 			self.action_prompt_template = self.action_prompt_template.replace("$INITIAL_DIALOGUE$", initial_dialogue[:-2]).replace("$OTHER_AGENT_NAME$", ", ".join(self.other_agent_name))
 			self.message_prompt_template = self.message_prompt_template.replace("$INITIAL_DIALOGUE$", initial_dialogue[:-2]).replace("$OTHER_AGENT_NAME$", ", ".join(self.other_agent_name))
 
 		self.sampling_params = {
-			"max_tokens": args.max_tokens,
-			"temperature": args.t,
-			"top_p": args.top_p,
-			"n": args.n,
+			"max_tokens": self.args.max_tokens,
+			"temperature": self.args.t,
+			"top_p": self.args.top_p,
+			"n": self.args.n,
 		}
 
 	def parse_answer(self, available_actions, text):
@@ -61,7 +62,7 @@ class llm_agent:
 			print("WARNING! Fuzzy match!")
 		for i in range(len(available_actions)):
 			action = available_actions[i]
-			if self.communication and i == 0:
+			if self.communication != "no" and i == 0:
 				continue
 			act, name, id = action.split(' ')
 			option = chr(ord('A') + i)
@@ -74,33 +75,50 @@ class llm_agent:
 	def build_action_prompt(self, plans):
 
 		prompt = self.action_prompt_template.replace("$OBSERVATION$", self.obs + str(self._mazeAgent.find_item()))
-		if len(set(self._mazeAgent._parentMaze.dead_end).intersection(set(self._mazeAgent._look()[0]))) == 0:
-			prompt = prompt.replace("$DEAD_END$", "None")
+
+		your_dead_end = self._mazeAgent.dead_end
+		others_dead_end = set()
+		for agent in self._mazeAgent._parentMaze._agents:
+			if agent != self._mazeAgent:
+				others_dead_end = others_dead_end.union(agent.dead_end)
+
+		if len(your_dead_end.intersection(set(self._mazeAgent._look()[0]))) == 0:
+			prompt = prompt.replace("$YOUR_DEAD_END$", "None")
 		else:
-			prompt = prompt.replace("$DEAD_END$", ", ".join([str(i) for i in list(set(self._mazeAgent._parentMaze.dead_end).intersection(set(self._mazeAgent._look()[0])))]))
+			prompt = prompt.replace("$YOUR_DEAD_END$", ", ".join([str(i) for i in list(your_dead_end.intersection(set(self._mazeAgent._look()[0])))]))
+		
+		if len(others_dead_end.intersection(set(self._mazeAgent._look()[0]))) == 0:
+			prompt = prompt.replace("$OTHER_DEAD_END$", "None")
+		else:
+			prompt = prompt.replace("$OTHER_DEAD_END$", ", ".join([str(i) for i in list(others_dead_end.intersection(set(self._mazeAgent._look()[0])))]))
+		
 		prompt = prompt.replace("$PROGRESS$", f"{self._mazeAgent._parentMaze.score}/{self._mazeAgent._parentMaze.num_items} items found")
 		prompt = prompt.replace("$ACTION_HISTORY$", ", ".join(self.action_history[-10:]))
 		prompt = prompt.replace("$AVAILABLE_ACTIONS$", plans)
 
-		if self.args.communication == "direct":
-			prompt = prompt.replace("$DIALOGUE_HISTORY$", "\n".join(self._mazeAgent._parentMaze.dialogue_history))
+		if self.args.communication == "direct" or self.args.communication == "always":
+			prompt = prompt.replace("$DIALOGUE_HISTORY$", "\n".join(self._mazeAgent._parentMaze.dialogue_history[-10:]))
 
 		return prompt
 
 	def build_message_prompt(self):
 
 		prompt = self.message_prompt_template.replace("$OBSERVATION$", self.obs + str(self._mazeAgent.find_item()))
-		if len(set(self._mazeAgent._parentMaze.dead_end).intersection(set(self._mazeAgent._look()[0]))) == 0:
-			prompt = prompt.replace("$DEAD_END$", "None")
+		your_dead_end = self._mazeAgent.dead_end
+
+		if len(your_dead_end.intersection(set(self._mazeAgent._look()[0]))) == 0:
+			prompt = prompt.replace("$YOUR_DEAD_END$", "None")
 		else:
-			prompt = prompt.replace("$DEAD_END$", ", ".join([str(i) for i in list(set(self._mazeAgent._parentMaze.dead_end).intersection(set(self._mazeAgent._look()[0])))]))
+			prompt = prompt.replace("$YOUR_DEAD_END$", ", ".join([str(i) for i in list(your_dead_end.intersection(set(self._mazeAgent._look()[0])))]))
+	
+
 		prompt = prompt.replace("$PROGRESS$", f"{self._mazeAgent._parentMaze.score}/{self._mazeAgent._parentMaze.num_items} items found")
-		prompt = prompt.replace("$DIALOGUE_HISTORY$", ", ".join(self._mazeAgent._parentMaze.dialogue_history))
+		prompt = prompt.replace("$DIALOGUE_HISTORY$", "\n".join(self._mazeAgent._parentMaze.dialogue_history[-10:]))
 		prompt = prompt + f"\n{self.agent_name}:"
 
 		return prompt
 
-	def get_action(self):
+	def get_action(self, enable_message, enable_move):
 		"""
 		:param observation: {"edges":[{'from_id', 'to_id', 'relation_type'}],
 		"nodes":[{'id', 'category', 'class_name', 'prefab_name', 'obj_transform':{'position', 'rotation', 'scale'}, 'bounding_box':{'center','size'}, 'properties', 'states'}],
@@ -109,27 +127,11 @@ class llm_agent:
 		:param goal:{predicate:[count, True, 2]}
 		:return:
 		"""
-		# if self.communication:
-		# 	for i in range(len(observation["messages"])):
-		# 		if observation["messages"][i] is not None:
-		# 			self.dialogue_history.append(f"{self.agent_names[i + 1]}: {observation['messages'][i]}")
 		info = {}
 
-		# if self.args.communication == "direct":
-		# 	message_prompt = self.build_message_prompt()
-		# 	chat_prompt = [{"role": "user", "content": message_prompt}]
-		# 	outputs, usage = self.LLM.generate(chat_prompt, self.sampling_params)
-		# 	self.total_cost += usage
-		# 	message = outputs[0]
-		# 	info['message_generator_prompt'] = message_prompt
-		# 	info['message_generator_outputs'] = outputs
-		# 	info['message_generator_usage'] = usage
-
-		available_actions = ["[MOVE] " + str(i) for i in self._mazeAgent._look()[0]]
-
-		if self.action_history[-1].startswith("[SEND MESSAGE]") or self.args.communication == "no":
-			pass
-		else:
+		available_actions = []
+		place_holder = 0
+		if enable_message:
 			message_prompt = self.build_message_prompt()
 			chat_prompt = [{"role": "user", "content": message_prompt}]
 			outputs, usage = self.LLM.generate(chat_prompt, self.sampling_params)
@@ -138,11 +140,37 @@ class llm_agent:
 			info['message_generator_prompt'] = message_prompt
 			info['message_generator_outputs'] = outputs
 			info['message_generator_usage'] = usage
-			available_actions = ["[SEND MESSAGE] " + message] + available_actions
+			available_actions += ["[SEND MESSAGE] " + message]
+			place_holder = 1
+
+		if enable_move:
+			available_actions += ["[MOVE] " + str(i) for i in self._mazeAgent._look()[0]]
+		
+		if len(available_actions) == 1:
+			if self.args.debug:
+				for key, value in info.items():
+					print(key)
+					print(value)
+
+			return available_actions[0], info
+
+		others_dead_end = set()
+		for agent in self._mazeAgent._parentMaze._agents:
+			if agent != self._mazeAgent:
+				others_dead_end = others_dead_end.union(agent.dead_end)
 
 		plans = ""
 		for i, plan in enumerate(available_actions):
 			plans += f"{chr(ord('A') + i)}. {plan}\n"
+
+			# plans += f"{chr(ord('A') + i)}. {plan}"
+			# if plan.startswith("[MOVE]"):
+			# 	if self._mazeAgent._look()[0][i-place_holder] in self._mazeAgent.dead_end:
+			# 		plans += f": My dead end\n"
+			# 	elif self._mazeAgent._look()[0][i-place_holder] in others_dead_end:
+			# 		plans += f": Others' dead end\n"
+			# 	else:
+			# 		plans += f"\n"
 
 		action_prompt = self.build_action_prompt(plans)
 
@@ -182,29 +210,33 @@ class llm_agent:
 
 	def run(self):
 		action = None
-		LM_times = 0
-		while action is None:
-			if LM_times > 3:
-				raise Exception(f"retrying LM_plan too many times")
-			action, a_info = self.get_action()
-			# if action is None:
-			# 	print("No more things to do!")
-			# 	action = f"[wait]"
+		info = {}
+		if self.args.communication == "always":
+			enable_message, enable_move = True, False
+		elif self.args.communication == "no":
+			enable_message, enable_move = False, True
+		elif self.args.communication == "direct":
+			enable_message, enable_move = True, True
 
-			self.action = action
-			self.action_history.append('[SEND MESSAGE]' if action.startswith('[SEND MESSAGE]') else action)
-			a_info.update({"steps": self.steps})
-			LM_times += 1
+		action, a_info = self.get_action(enable_message, enable_move)
 
-		if action == self.last_action:
-			self.stuck += 1
-		else:
-			self.stuck = 0
-		self.last_action = action
+		self.action = action
+		# self.action_history.append('[SEND MESSAGE]' if action.startswith('[SEND MESSAGE]') else action)
+		a_info.update({"steps": self.steps})
 
 		self.step(action)
+		if action.startswith('[SEND MESSAGE]'):
+			info["message_action"] = a_info
+			move_action, move_info = self.get_action(False, True)
+			self.action_history.append(move_action)
+			move_info.update({"steps": self.steps})
+			info["move_action"] = move_info
+			self.step(move_action)
+		else:
+			self.action_history.append(action)
+			info["move_action"] = a_info
 
-		return action, a_info
+		return action, info
 
 	# def reset(self, obs, containers_name, goal_objects_name, rooms_name, room_info, goal):
 	# 	self.steps = 0
@@ -215,12 +247,11 @@ class llm_agent:
 	# 	self.LLM.reset(self.rooms_name, self.roomname2id, self.goal_location, self.unsatisfied)
 	
 	def step(self, action):
-		
-		self.steps += 1
 
 		if action.startswith("[SEND MESSAGE]"):
 			message = action.split(']')[1].strip()
 			self._mazeAgent._parentMaze.dialogue_history.append(f"{self.agent_name}: {message}")
 		elif action.startswith("[MOVE]"):
+			self.steps += 1
 			location = action.split(']')[1].strip()
 			self.obs = self._mazeAgent.move(location)

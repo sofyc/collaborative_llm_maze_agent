@@ -55,7 +55,7 @@ class agent:
     Or they can be the physical agents (like robots)
     They can have two shapes (square or arrow)
     '''
-    def __init__(self,parentMaze,x=None,y=None,shape='square',goal=None,filled=False,footprints=False,color:COLOR=COLOR.blue,control=False):
+    def __init__(self,parentMaze,x=None,y=None,shape='square',goal=None,filled=False,footprints=False,color:COLOR=COLOR.blue,control=False, args=None):
         '''
         parentmaze-->  The maze on which agent is placed.
         x,y-->  Position of the agent i.e. cell inside which agent will be placed
@@ -103,6 +103,14 @@ class agent:
         self._body=[]
         self.position=(self.x,self.y)
         self._path=[]
+        self.dead_end = set()
+        self.args = args
+
+
+    def add_dead_end(self,position):
+        self.dead_end.add(position)
+        if self._parentMaze.visual:
+            agent(self._parentMaze,*position,shape='square',filled=True,color=COLOR.red)
         
     @property
     def x(self):
@@ -286,9 +294,14 @@ class agent:
             return f"Move failed. Possible next positions are " + ", ".join([str(p) for p in self._look()[0]])
         neighbors = self._parentMaze.find_neighbors((x, y))[0]
         
-        if self._parentMaze.remember_dead_end:
-            if len(neighbors) == len(set(neighbors) & self._parentMaze.dead_end) + 1:
-                self._parentMaze.add_dead_end((x, y))
+        if self.args.remember_dead_end:
+            others_dead_end = set()
+            for agent in self._parentMaze._agents:
+                if agent != self:
+                    others_dead_end = others_dead_end.union(agent.dead_end)
+
+            if len(neighbors) == len(set(neighbors) & self.dead_end.union(others_dead_end)) + 1:
+                self.add_dead_end((x, y))
 
         self.position = (x, y)
         self._path.append((x, y))
@@ -311,109 +324,15 @@ class agent:
 
             if self._parentMaze.visual:
                 killAgent(self._parentMaze.item_agents[self.position])
-            return f"Success! You have arrived at position {self.position} and found an item. Your path taken is {', '.join(str(p) for p in self._path)}. "
+            return f"You have arrived at position {self.position} and found an item."
 
         return f"You moved to position {self.position}. "
-
-    # def get_action(self, observation, goal):
-
-	# 	if self.communication:
-	# 		for i in range(len(observation["messages"])):
-	# 			if observation["messages"][i] is not None:
-	# 				self.dialogue_history.append(f"{self.agent_names[i + 1]}: {observation['messages'][i]}")
-
-	# 	satisfied, unsatisfied = self.check_progress(observation, goal)
-	# 	# print(f"satisfied: {satisfied}")
-	# 	if len(satisfied) > 0:
-	# 		self.unsatisfied = unsatisfied
-	# 		self.satisfied = satisfied
-		
-	# 	while action is None:
-		
-    #         plan, a_info = self.LLM_plan()
-    #         if plan is None: # NO AVAILABLE PLANS! Explore from scratch!
-    #             print("No more things to do!")
-    #             plan = f"[wait]"
-    #         self.plan = plan
-    #         self.action_history.append('[send_message]' if plan.startswith('[send_message]') else plan)
-    #         a_info.update({"steps": self.steps})
-    #         info.update({"LLM": a_info})
-    #         LM_times += 1
-	# 		if self.plan.startswith('[goexplore]'):
-	# 			action = self.goexplore()
-	# 		elif self.plan.startswith('[gocheck]'):
-	# 			action = self.gocheck()
-	# 		elif self.plan.startswith('[gograb]'):
-	# 			action = self.gograb()
-	# 		elif self.plan.startswith('[goput]'):
-	# 			action = self.goput()
-	# 		elif self.plan.startswith('[send_message]'):
-	# 			action = self.plan[:]
-	# 			self.plan = None
-	# 		elif self.plan.startswith('[wait]'):
-	# 			action = None
-	# 			break
-	# 		else:
-	# 			raise ValueError(f"unavailable plan {self.plan}")
-
-	# 	self.steps += 1
-	# 	info.update({"plan": self.plan,
-	# 				 })
-	# 	if action == self.last_action and self.current_room['class_name'] == self.last_room:
-	# 		self.stuck += 1
-	# 	else:
-	# 		self.stuck = 0
-	# 	self.last_action = action
-	# 	# self.last_location = self.location
-	# 	if self.stuck > 20:
-	# 		print("Warning! stuck!")
-	# 		self.action_history[-1] += ' but unfinished'
-	# 		self.plan = None
-	# 		if type(self.id_inside_room[self.goal_location_id]) is list:
-	# 			target_room_name = self.id_inside_room[self.goal_location_id][0]
-	# 		else:
-	# 			target_room_name = self.id_inside_room[self.goal_location_id]
-	# 		action = f"[walktowards] {self.goal_location}"
-	# 		if self.current_room['class_name'] != target_room_name:
-	# 			action = f"[walktowards] <{target_room_name}> ({self.roomname2id[target_room_name]})"
-	# 		self.stuck = 0
-	
-	# 	return action, info
-
-# class textLabel:
-#     '''
-#     This class is to create Text Label to show different results on the window.
-#     '''
-#     def __init__(self,parentMaze,title,value):
-#         '''
-#         parentmaze-->   The maze on which Label will be displayed.
-#         title-->        The title of the value to be displayed
-#         value-->        The value to be displayed
-#         '''
-#         self.title=title
-#         self._value=value
-#         self._parentMaze=parentMaze
-#         # self._parentMaze._labels.append(self)
-#         self._var=None
-#         self.drawLabel()
-#     @property
-#     def value(self):
-#         return self._value
-#     @value.setter
-#     def value(self,v):
-#         self._value=v
-#         self._var.set(f'{self.title} : {v}')
-#     def drawLabel(self):
-#         self._var = StringVar()
-#         self.lab = Label(self._parentMaze._canvas, textvariable=self._var, bg="white", fg="black",font=('Helvetica bold',12),relief=RIDGE)
-#         self._var.set(f'{self.title} : {self.value}')
-#         self.lab.pack(expand = True,side=LEFT,anchor=NW)
 
 class maze:
     '''
     This is the main class to create maze.
     '''
-    def __init__(self,rows=10,cols=10,visual=False,remember_dead_end=False):
+    def __init__(self,rows=10,cols=10,visual=False):
         '''
         rows--> No. of rows of the maze
         cols--> No. of columns of the maze
@@ -447,8 +366,6 @@ class maze:
         self.score=0
         self.finish = False
         self.dialogue_history = []
-        self.dead_end = set()
-        self.remember_dead_end = remember_dead_end
     
     def find_neighbors(self,position):
         x, y = position
@@ -468,11 +385,6 @@ class maze:
             possible_next_directions.append("Down")
         
         return possible_next_positions, possible_next_directions
-
-    def add_dead_end(self,position):
-        self.dead_end.add(position)
-        if self.visual:
-            agent(self,*position,shape='square',filled=True,color=COLOR.red)
 
     @property
     def agent_positions(self):

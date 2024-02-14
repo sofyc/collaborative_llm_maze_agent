@@ -15,7 +15,7 @@ parser.add_argument("--num_agents", type=int, default=4)
 parser.add_argument("--num_items", type=int, default=4)
 parser.add_argument("--agent_lm_id", type=str, default=None)
 parser.add_argument('--agent_type', default='dfs', choices=['dfs', 'llm'], help='which type pf agent to use')
-parser.add_argument('--communication', default='no', choices=['no', 'direct', 'monitor'], help='the ways agent communicate')
+parser.add_argument('--communication', default='no', choices=['no', 'direct', 'monitor', 'always'], help='the ways agent communicate')
 parser.add_argument('--cot', action="store_true", help='use cot')
 parser.add_argument('--remember_dead_end', action="store_true", help='remember and share dead end in a maze')
 parser.add_argument('--prompt_template_path', default=None, help='path to prompt template file')
@@ -26,14 +26,14 @@ parser.add_argument('--seed', type=int, default=1)
 
 parser.add_argument("--t", default=0, type=float)
 parser.add_argument("--top_p", default=1.0, type=float)
-parser.add_argument("--max_tokens", default=96, type=int)
+parser.add_argument("--max_tokens", default=128, type=int)
 parser.add_argument("--n", default=1, type=int)
 
 args = parser.parse_args()
 
 random.seed(args.seed)
 initial_position = [(random.randint(1, args.rows), random.randint(1, args.columns)) for _ in range(args.num_agents)]
-m = maze(args.rows, args.columns, visual=args.visual, remember_dead_end=args.remember_dead_end)
+m = maze(args.rows, args.columns, visual=args.visual)
 if args.load_maze:
     m.CreateMaze(loadMaze=f"maze/{args.load_maze}")
 else:
@@ -49,9 +49,9 @@ elif args.agent_type == "dfs":
     maze_agent = base_agent
 
 for i in range(args.num_agents):
-    a = agent(m, x=initial_position[i][0], y=initial_position[i][1], shape="arrow", color=colors[i], control=True)
+    a = agent(m, x=initial_position[i][0], y=initial_position[i][1], shape="arrow", color=colors[i], control=True, args=args)
     a.move(str(initial_position[i]))
-    agents.append(maze_agent(a, i, args))
+    agents.append(maze_agent(a, i))
 
 task_description = ""
 if args.visual:
@@ -61,15 +61,11 @@ if args.visual:
 finish = False
 agent_info = {}
 save_info = {}
-for r in range(200):
+for r in range(100):
     for it, agent in enumerate(agents):
         action, info = agent.run()
         agent_info[agent.agent_name] = info
 
-        if action.startswith("[SEND MESSAGE]"):
-            action, info = agent.run()
-            agent_info[agent.agent_name+"2"] = info
-        # agent.step(action)
         if args.visual:
             m._canvas.update()
 
@@ -82,12 +78,6 @@ for r in range(200):
     
     save_info[r] = agent_info
     agent_info = {}
-
-    # if args.visual:
-    #     m._canvas.update()
-
-    #     if args.agent_type == "dfs":
-    #         time.sleep(1)
 
     if finish:
         break
@@ -105,5 +95,5 @@ if args.agent_type == "dfs":
 else:
     result_file = f"results/{args.agent_type}_{args.agent_lm_id}_{args.communication}_{args.num_agents}_{args.num_items}_{args.load_maze}.json"
 
-# with open(result_file, "w") as f:
-#     f.write(json.dumps(save_info, indent=4))
+with open(result_file, "w") as f:
+    f.write(json.dumps(save_info, indent=4))
