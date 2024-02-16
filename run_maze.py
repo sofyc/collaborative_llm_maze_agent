@@ -4,6 +4,7 @@ from agents.LLM_agent import llm_agent
 from agents.base_agent import base_agent
 import random
 import time
+import datetime
 import json
 
 
@@ -26,7 +27,7 @@ parser.add_argument('--seed', type=int, default=1)
 
 parser.add_argument("--t", default=0, type=float)
 parser.add_argument("--top_p", default=1.0, type=float)
-parser.add_argument("--max_tokens", default=128, type=int)
+parser.add_argument("--max_tokens", default=180, type=int)
 parser.add_argument("--n", default=1, type=int)
 
 args = parser.parse_args()
@@ -90,10 +91,21 @@ save_info['steps'] = total_steps
 save_info['scores'] = m.score
 save_info['args'] = vars(args)
 
+
+
+current_time = datetime.datetime.now()
+year = current_time.year
+month = current_time.month
+day = current_time.day
+hour = current_time.hour
+minute = current_time.minute
+second = current_time.second
+formatted_time = f"{year}-{month:02d}-{day:02d}-{hour:02d}:{minute:02d}:{second:02d}"
+
 if args.agent_type == "dfs":
-    result_file = f"results/{args.agent_type}_{args.num_agents}_{args.num_items}_{args.load_maze}.json"
+    result_file = f"results_{args.agent_type}/{args.num_agents}_{args.num_items}_{args.load_maze}_{formatted_time}.json"
 else:
-    result_file = f"results/{args.agent_type}_{args.agent_lm_id}_{args.communication}_{args.num_agents}_{args.num_items}_{args.load_maze}.json"
+    result_file = f"results_{args.agent_type}/{args.agent_lm_id}_{args.communication}_{args.num_agents}_{args.num_items}_{args.load_maze}_{formatted_time}.json"
 
 with open(result_file, "w") as f:
     f.write(json.dumps(save_info, indent=4))

@@ -40,8 +40,8 @@ class LLM:
 		generated_samples = [response.choices[i].message.content for i in
 								range(sampling_params['n'])]
 		if 'gpt-4' in self.lm_id:
-			usage = response.usage.prompt_tokens * 0.03 / 1000 + response.usage.completion_tokens * 0.06 / 1000
+			usage = response.usage.prompt_tokens * 0.01 / 1000 + response.usage.completion_tokens * 0.03 / 1000
 		elif ('gpt-3.5' in self.lm_id) or ('gpt-35' in self.lm_id):
-			usage = response.usage.total_tokens * 0.002 / 1000
+			usage = response.usage.prompt_tokens * 0.0005 / 1000 + response.usage.completion_tokens * 0.0015 / 1000
 
 		return generated_samples, usage

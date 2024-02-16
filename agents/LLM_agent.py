@@ -36,6 +36,11 @@ class llm_agent:
 				else:
 					initial_dialogue += id2name[i] + ": Thanks! I'll tell you my position and dead end I found, let's try to avoid dead end and explore new positions as much as possible.\n"
 
+				# if i == 0:
+				# 	initial_dialogue += id2name[i] + ": Hello everyone, I'll tell you my position and dead end I found.\n"
+				# else:
+				# 	initial_dialogue += id2name[i] + ": Thanks! I'll tell you my position and dead end I found.\n"
+
 			self.action_prompt_template = self.action_prompt_template.replace("$INITIAL_DIALOGUE$", initial_dialogue[:-2]).replace("$OTHER_AGENT_NAME$", ", ".join(self.other_agent_name))
 			self.message_prompt_template = self.message_prompt_template.replace("$INITIAL_DIALOGUE$", initial_dialogue[:-2]).replace("$OTHER_AGENT_NAME$", ", ".join(self.other_agent_name))
 
@@ -52,6 +57,7 @@ class llm_agent:
 			if action in text:
 				return action
 
+		text = text.replace('\n', ' ')
 		for i in range(len(available_actions)):
 			action = available_actions[i]
 			option = chr(ord('A') + i)
@@ -62,11 +68,11 @@ class llm_agent:
 			print("WARNING! Fuzzy match!")
 		for i in range(len(available_actions)):
 			action = available_actions[i]
-			if self.communication != "no" and i == 0:
-				continue
-			act, name, id = action.split(' ')
+			if action.startswith("[SEND MESSAGE]"):
+				return action
+			pos = action.split(']')[1].strip()
 			option = chr(ord('A') + i)
-			if f"{option} " in text or act in text or name in text or id in text:
+			if f"{option} " in text or pos in text:
 				return action
 		if self.args.debug:
 			print("WARNING! No available action parsed!!! Random choose one")
@@ -75,45 +81,47 @@ class llm_agent:
 	def build_action_prompt(self, plans):
 
 		prompt = self.action_prompt_template.replace("$OBSERVATION$", self.obs + str(self._mazeAgent.find_item()))
-
+		prompt = prompt.replace("$MY_POSITION$", str(self._mazeAgent.position))
+		
 		your_dead_end = self._mazeAgent.dead_end
 		others_dead_end = set()
 		for agent in self._mazeAgent._parentMaze._agents:
 			if agent != self._mazeAgent:
 				others_dead_end = others_dead_end.union(agent.dead_end)
 
-		if len(your_dead_end.intersection(set(self._mazeAgent._look()[0]))) == 0:
-			prompt = prompt.replace("$YOUR_DEAD_END$", "None")
+		if len(your_dead_end.intersection(set(self._mazeAgent._look()[0] + [self._mazeAgent.position]))) == 0:
+			prompt = prompt.replace("$MY_DEAD_END$", "None")
 		else:
-			prompt = prompt.replace("$YOUR_DEAD_END$", ", ".join([str(i) for i in list(your_dead_end.intersection(set(self._mazeAgent._look()[0])))]))
+			prompt = prompt.replace("$MY_DEAD_END$", ", ".join([str(i) for i in list(your_dead_end.intersection(set(self._mazeAgent._look()[0] + [self._mazeAgent.position])))]))
 		
-		if len(others_dead_end.intersection(set(self._mazeAgent._look()[0]))) == 0:
-			prompt = prompt.replace("$OTHER_DEAD_END$", "None")
-		else:
-			prompt = prompt.replace("$OTHER_DEAD_END$", ", ".join([str(i) for i in list(others_dead_end.intersection(set(self._mazeAgent._look()[0])))]))
+		# if len(others_dead_end.intersection(set(self._mazeAgent._look()[0] + [self._mazeAgent.position]))) == 0:
+		# 	prompt = prompt.replace("$OTHER_DEAD_END$", "None")
+		# else:
+		# 	prompt = prompt.replace("$OTHER_DEAD_END$", ", ".join([str(i) for i in list(others_dead_end.intersection(set(self._mazeAgent._look()[0] + [self._mazeAgent.position])))]))
 		
 		prompt = prompt.replace("$PROGRESS$", f"{self._mazeAgent._parentMaze.score}/{self._mazeAgent._parentMaze.num_items} items found")
-		prompt = prompt.replace("$ACTION_HISTORY$", ", ".join(self.action_history[-10:]))
+		prompt = prompt.replace("$ACTION_HISTORY$", ", ".join(self.action_history[-5:]))
 		prompt = prompt.replace("$AVAILABLE_ACTIONS$", plans)
 
 		if self.args.communication == "direct" or self.args.communication == "always":
-			prompt = prompt.replace("$DIALOGUE_HISTORY$", "\n".join(self._mazeAgent._parentMaze.dialogue_history[-10:]))
+			prompt = prompt.replace("$DIALOGUE_HISTORY$", "\n".join(self._mazeAgent._parentMaze.dialogue_history[-5:]))
 
 		return prompt
 
 	def build_message_prompt(self):
-
+		
 		prompt = self.message_prompt_template.replace("$OBSERVATION$", self.obs + str(self._mazeAgent.find_item()))
+		prompt = prompt.replace("$MY_POSITION$", str(self._mazeAgent.position))
 		your_dead_end = self._mazeAgent.dead_end
 
-		if len(your_dead_end.intersection(set(self._mazeAgent._look()[0]))) == 0:
-			prompt = prompt.replace("$YOUR_DEAD_END$", "None")
+		if len(your_dead_end.intersection(set(self._mazeAgent._look()[0] + [self._mazeAgent.position]))) == 0:
+			prompt = prompt.replace("$MY_DEAD_END$", "None")
 		else:
-			prompt = prompt.replace("$YOUR_DEAD_END$", ", ".join([str(i) for i in list(your_dead_end.intersection(set(self._mazeAgent._look()[0])))]))
+			prompt = prompt.replace("$MY_DEAD_END$", ", ".join([str(i) for i in list(your_dead_end.intersection(set(self._mazeAgent._look()[0] + [self._mazeAgent.position])))]))
 	
 
 		prompt = prompt.replace("$PROGRESS$", f"{self._mazeAgent._parentMaze.score}/{self._mazeAgent._parentMaze.num_items} items found")
-		prompt = prompt.replace("$DIALOGUE_HISTORY$", "\n".join(self._mazeAgent._parentMaze.dialogue_history[-10:]))
+		prompt = prompt.replace("$DIALOGUE_HISTORY$", "\n".join(self._mazeAgent._parentMaze.dialogue_history[-5:]))
 		prompt = prompt + f"\n{self.agent_name}:"
 
 		return prompt
@@ -147,6 +155,7 @@ class llm_agent:
 			available_actions += ["[MOVE] " + str(i) for i in self._mazeAgent._look()[0]]
 		
 		if len(available_actions) == 1:
+			info.update({"action": available_actions[0], "total_cost": self.total_cost})
 			if self.args.debug:
 				for key, value in info.items():
 					print(key)
@@ -161,21 +170,30 @@ class llm_agent:
 
 		plans = ""
 		for i, plan in enumerate(available_actions):
-			plans += f"{chr(ord('A') + i)}. {plan}\n"
+			# plans += f"{chr(ord('A') + i)}. {plan}\n"
 
-			# plans += f"{chr(ord('A') + i)}. {plan}"
-			# if plan.startswith("[MOVE]"):
-			# 	if self._mazeAgent._look()[0][i-place_holder] in self._mazeAgent.dead_end:
-			# 		plans += f": My dead end\n"
-			# 	elif self._mazeAgent._look()[0][i-place_holder] in others_dead_end:
-			# 		plans += f": Others' dead end\n"
-			# 	else:
-			# 		plans += f"\n"
+			plans += f"{chr(ord('A') + i)}. {plan}"
+			if plan.startswith("[MOVE]"):
+				if self._mazeAgent._look()[0][i-place_holder] in self._mazeAgent.dead_end:
+					plans += f": This position leads to a dead end confirmed by myself."
+				elif self._mazeAgent._look()[0][i-place_holder] in others_dead_end:
+					plans += f": This position leads to a dead end confirmed by other agents."
+				else:
+					plans += f": This position does not lead to a dead end."
+				
+				if self._mazeAgent._look()[0][i-place_holder] not in self._mazeAgent.visited:
+					plans += f" This position is unexplored.\n"
+				else:
+					plans += f" This position has been explored.\n"
+			else:
+				plans += f"\n"
+
+
 
 		action_prompt = self.build_action_prompt(plans)
 
 		if self.args.cot:
-			cot_prompt = action_prompt + " Let's think step by step."
+			cot_prompt = action_prompt + "\nLet's think step by step."
 			chat_prompt = [{"role": "user", "content": cot_prompt}]
 			outputs, usage = self.LLM.generate(chat_prompt, self.sampling_params)
 			output = outputs[0]

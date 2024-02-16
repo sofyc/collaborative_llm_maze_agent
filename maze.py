@@ -105,6 +105,7 @@ class agent:
         self._path=[]
         self.dead_end = set()
         self.args = args
+        self.visited = set()
 
 
     def add_dead_end(self,position):
@@ -305,6 +306,7 @@ class agent:
 
         self.position = (x, y)
         self._path.append((x, y))
+        self.visited.add((x, y))
 
         if self._parentMaze.visual:
             self._parentMaze._win.update()

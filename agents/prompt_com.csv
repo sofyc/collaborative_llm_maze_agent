@@ -1,14 +1,8 @@
 type,prompt
-base,"I'm agent $AGENT_NAME$. I'm searching in a $ROW$x$COL$ maze with other agents $OTHER_AGENT_NAME$. My visibility is limited to the surrounding four positions. Given our shared goal, my dead end, others' dead end, my observation, progress, dialogue history, and my previous actions, please help me choose the best available action to achieve the goal as soon as possible.
-Here are some rules to search the maze, you must examine these rules one by one when choosing actions:
-1. Never move to my dead end.
-2. Only move to others' dead ends if I am surrounded by dead ends.
-3. If I have a new position (not dead end) to explore, always move there.
-4. When I encounter a fork in the maze, try to take a different path from other agents to explore new positions.
+base,"You are an expert in maze item search. I'm agent $AGENT_NAME$. I'm searching in a $ROW$x$COL$ maze with other agents $OTHER_AGENT_NAME$. My visibility is limited to the surrounding four positions. Given our shared goal, my position, my observation, progress, dialogue history, my previous actions, available actions and helpful rules, please help me choose the best available action to achieve the goal as soon as possible.
 Goal: $GOAL$
-My Dead End: $YOUR_DEAD_END$
-Others' Dead End: $OTHER_DEAD_END$
-Observation: $OBSERVATION$
+My position: $MY_POSITION$
+My observation: $OBSERVATION$
 Progress: $PROGRESS$
 Dialogue history:
 $INITIAL_DIALOGUE$
@@ -17,18 +11,25 @@ Previous actions: $ACTION_HISTORY$
 Available actions:
 $AVAILABLE_ACTIONS$
 
-Note: Remember to include the letter option you choose in answer.
+Here are some helpful rules to search the maze, I must examine these rules one by one when choosing actions:
+1. Always move to unexplored positions if possible.
+2. Never move to positions that lead to a dead end confirmed by myself.
+3. Only move to positions that lead to a dead end confirmed by other agents if I am surrounded by positions that lead to a dead end.
+4. When I can move to multiple positions that don't lead to a dead end, do not repeat previous actions and do not move to positions that have been explored.
+5. When I can move to multiple unexplored positions, take a different path from other agents.
 
+Note: Remember to include the letter option in answer.
 Answer:"
-goal,"Find all the items in the maze."
-gen,"I'm agent $AGENT_NAME$. I'm searching in a $ROW$x$COL$ maze with other agents $OTHER_AGENT_NAME$. My visibility is limited to the surrounding four positions. Given our shared goal, my dead end, my observation, progress, dialogue history, and my previous actions, please help me generate a short message to send to $OTHER_AGENT_NAME$ to help us achieve the goal as soon as possible.
+goal,"Find all the items in the maze. Items are randomly generated in the maze."
+gen,"You are an expert in message generating. I'm agent $AGENT_NAME$. I'm searching in a $ROW$x$COL$ maze with other agents $OTHER_AGENT_NAME$. My visibility is limited to the surrounding four positions. Given our shared goal, dead ends confirmed by me, my position, my observation, progress, and dialogue history, please help me generate a short message to send to $OTHER_AGENT_NAME$ to help us achieve the goal as soon as possible.
 Goal: $GOAL$
-My Dead End: $YOUR_DEAD_END$
-Observation: $OBSERVATION$
+Dead ends confirmed by me: $MY_DEAD_END$
+My position: $MY_POSITION$
+My observation: $OBSERVATION$
 Progress: $PROGRESS$
 Dialogue history:
 $INITIAL_DIALOGUE$
 $DIALOGUE_HISTORY$
 
-Note: The generated message should be accurate, helpful and brief. Do not generate repetitive messages.
+Note: The generated message should be accurate, helpful and brief. Include my position and my dead end in message to help us search the maze efficiently. Do not generate repetitive messages.
 "
