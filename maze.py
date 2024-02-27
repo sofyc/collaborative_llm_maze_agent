@@ -24,6 +24,7 @@ SOFTWARE.
 
 import random,datetime,csv,os
 from tkinter import *
+from tkinter import Tk, Canvas, font
 from enum import Enum
 from collections import deque
 
@@ -39,14 +40,27 @@ class COLOR(Enum):
     '''
     dark=('gray11','white')
     light=('white','black')
-    black=('black','dim gray')
-    red=('red3','tomato')
-    cyan=('cyan4','cyan4')
-    green=('green4','pale green')
-    blue=('DeepSkyBlue4','DeepSkyBlue2')
+    black=('black','black')
+    red=('red3','red3')
+    green=('green4','green4')
+    cyan=('cyan4','cyan3')
+    blue=('DeepSkyBlue4','DeepSkyBlue4')
     yellow=('yellow2','yellow2')
+    purple = ('purple4', 'purple4')
+    orange = ('orange', 'orange')
+    pink = ('DeepPink4', 'DeepPink4')
+    brown = ('saddle brown', 'saddle brown')
+    lavender = ('medium purple', 'medium purple')
+    magenta = ('magenta4', 'magenta4')
+    teal = ('dark slate gray', 'dark slate gray')
+    gold = ('gold3', 'gold3')
+    olive = ('dark olive green', 'dark olive green')
+    salmon = ('salmon4', 'salmon4')
+    slate = ('slate gray', 'slate gray')
+    indigo = ('indigo', 'indigo')
 
-id2name = ['Alice', 'Bob', 'Carol', 'Dave', 'Eve', 'Francis']
+
+id2name = ['Alice', 'Bob', 'Carol', 'Dave', 'Eve', 'Francis', 'Grace', 'Hank', 'Ivy', 'Jack', 'Katie', 'Leo', 'Mia', 'Nate', 'Olivia', 'Paul', 'Quinn', 'Ruby', 'Sam', 'Tina']
 
 class agent:
     '''
@@ -55,7 +69,7 @@ class agent:
     Or they can be the physical agents (like robots)
     They can have two shapes (square or arrow)
     '''
-    def __init__(self,parentMaze,x=None,y=None,shape='square',goal=None,filled=False,footprints=False,color:COLOR=COLOR.blue,control=False, args=None):
+    def __init__(self,parentMaze,x=None,y=None,shape='square',goal=None,filled='center',footprints=False,color:COLOR=COLOR.blue,args=None):
         '''
         parentmaze-->  The maze on which agent is placed.
         x,y-->  Position of the agent i.e. cell inside which agent will be placed
@@ -80,7 +94,6 @@ class agent:
         '''
         self._parentMaze=parentMaze
         self.color=color
-        self.control=control
         if(isinstance(color,str)):
             if(color in COLOR.__members__):
                 self.color=COLOR[color]
@@ -94,8 +107,7 @@ class agent:
         self.x=x
         self.y=y
         self.footprints=footprints
-        if self.control:
-            self._parentMaze._agents.append(self)
+        # self._parentMaze._agents.append(self)
         if goal==None:
             self.goal=self._parentMaze._goal
         else:
@@ -104,6 +116,7 @@ class agent:
         self.position=(self.x,self.y)
         self._path=[]
         self.dead_end = set()
+        self.dead_end_agent = []
         self.args = args
         self.visited = set()
 
@@ -111,7 +124,8 @@ class agent:
     def add_dead_end(self,position):
         self.dead_end.add(position)
         if self._parentMaze.visual:
-            agent(self._parentMaze,*position,shape='square',filled=True,color=COLOR.red)
+            a = agent(self._parentMaze,*position,shape='square',filled='left_top',color=COLOR.red)
+            self.dead_end_agent.append(a)
         
     @property
     def x(self):
@@ -132,38 +146,42 @@ class agent:
         y=self.y*w-w+self._parentMaze._LabWidth
 
         if self.shape=='square':
-            if self.filled:
+            if self.filled == 'all':
                 self._coord=(y, x,y + w, x + w)
-            else:
+            elif self.filled == 'center':
                 self._coord=(y + w/2.5, x + w/2.5,y + w/2.5 +w/4, x + w/2.5 +w/4)
+            elif self.filled == 'left_top':
+                self._coord=(y, x ,y +w/4, x+w/4)
+            elif self.filled == 'big':
+                self._coord=(y + w/4, x + w/4,y + w/4 +w/2, x + w/4 +w/2)
         else:
             self._coord=(y + w/2, x + 3*w/9,y + w/2, x + 3*w/9+w/4)
 
         if(hasattr(self,'_head')):
-            if self.footprints is False:
-                self._parentMaze._canvas.delete(self._head)
-            else:
-                if self.shape=='square':
-                    self._parentMaze._canvas.itemconfig(self._head, fill=self.color.value[1],outline="")
-                    self._parentMaze._canvas.tag_raise(self._head)
-                    try:
-                        self._parentMaze._canvas.tag_lower(self._head,'ov')
-                    except:
-                        pass
-                    if self.filled:
-                        lll=self._parentMaze._canvas.coords(self._head)
-                        oldcell=(round(((lll[1]-26)/self._parentMaze._cell_width)+1),round(((lll[0]-26)/self._parentMaze._cell_width)+1))
-                        self._parentMaze._redrawCell(*oldcell,self._parentMaze.theme)
-                else:
-                    print(self._head)
-                    self._parentMaze._canvas.itemconfig(self._head, fill=self.color.value[1])#,outline='gray70')
-                    self._parentMaze._canvas.tag_raise(self._head)
-                    try:
-                        self._parentMaze._canvas.tag_lower(self._head,'ov')
-                    except:
-                        pass
-                self._body.append(self._head)
-            if not self.filled or self.shape=='arrow':
+            # if self.footprints is False:
+            self._parentMaze._canvas.delete(self._head)
+            # else:
+            #     if self.shape=='square':
+            #         self._parentMaze._canvas.itemconfig(self._head, fill=self.color.value[1],outline="")
+            #         self._parentMaze._canvas.tag_raise(self._head)
+            #         try:
+            #             self._parentMaze._canvas.tag_lower(self._head,'ov')
+            #         except:
+            #             pass
+            #         if self.filled == 'all':
+            #             lll=self._parentMaze._canvas.coords(self._head)
+            #             oldcell=(round(((lll[1]-26)/self._parentMaze._cell_width)+1),round(((lll[0]-26)/self._parentMaze._cell_width)+1))
+            #             self._parentMaze._redrawCell(*oldcell,self._parentMaze.theme)
+            #     else:
+            #         print(self._head)
+            #         self._parentMaze._canvas.itemconfig(self._head, fill=self.color.value[1])#,outline='gray70')
+            #         self._parentMaze._canvas.tag_raise(self._head)
+            #         try:
+            #             self._parentMaze._canvas.tag_lower(self._head,'ov')
+            #         except:
+            #             pass
+            #     self._body.append(self._head)
+            if self.filled != 'all' or self.shape=='arrow':
                 if self.shape=='square':
                     self._head=self._parentMaze._canvas.create_rectangle(*self._coord,fill=self.color.value[0],outline='') #stipple='gray75'
                     try:
@@ -201,6 +219,10 @@ class agent:
             except:
                 pass
             self._parentMaze._redrawCell(self.x,self.y,theme=self._parentMaze.theme)
+        
+        if(hasattr(self,'agent_name')):
+            self.add_text(self.agent_name)
+
     @property
     def position(self):
         return (self.x,self.y)
@@ -209,6 +231,20 @@ class agent:
         self.x=newpos[0]
         self.y=newpos[1]
         self._position=newpos
+    
+    def add_text(self, text):
+        if(hasattr(self,'_text')):
+            self._parentMaze._canvas.delete(self._text)
+
+        w=self._parentMaze._cell_width
+        x=self.x*w-w+self._parentMaze._LabWidth
+        y=self.y*w-w+self._parentMaze._LabWidth
+
+        self._font = font.Font(size=1)
+        self._text=self._parentMaze._canvas.create_text(y+w/2, x+w/2, fill="red", text=text, font=self._font)
+        self._parentMaze._canvas.tag_raise(self._text)
+        self._parentMaze._canvas.itemconfig(self._text, font=self._font)
+
     def _RCCW(self):
         '''
         To Rotate the agent in Counter Clock Wise direction
@@ -301,7 +337,7 @@ class agent:
                 if agent != self:
                     others_dead_end = others_dead_end.union(agent.dead_end)
 
-            if len(neighbors) == len(set(neighbors) & self.dead_end.union(others_dead_end)) + 1:
+            if len(neighbors) <= len(set(neighbors) & self.dead_end.union(others_dead_end)) + 1:
                 self.add_dead_end((x, y))
 
         self.position = (x, y)
@@ -310,25 +346,127 @@ class agent:
 
         if self._parentMaze.visual:
             self._parentMaze._win.update()
-        if self.position in self._parentMaze.item_positions:
-            self._parentMaze.score += 1
-            self._parentMaze.item_positions.remove(self.position)
-            if len(self._parentMaze.item_positions) == 0:
-                self._parentMaze.finish = True
-
-            def killAgent(a):
-                '''
-                if the agent should be killed after it reaches the Goal or completes the path
-                '''
-                for i in range(len(a._body)):
-                    self._parentMaze._canvas.delete(a._body[i])
-                self._parentMaze._canvas.delete(a._head) 
-
-            if self._parentMaze.visual:
-                killAgent(self._parentMaze.item_agents[self.position])
-            return f"You have arrived at position {self.position} and found an item."
 
         return f"You moved to position {self.position}. "
+    
+    def pick(self) -> str:
+
+        if self.position in self._parentMaze.item_positions:
+            item = self._parentMaze.item_positions[self.position]
+            if item.item_type == 'regular':
+                obs = f"You have arrived at position {self.position} and pick up an item."
+                if self._parentMaze.visual:
+                    self._parentMaze.item_positions[self.position].figure_agent.kill()
+                del self._parentMaze.item_positions[self.position]
+                self._parentMaze.score += 1
+        
+            elif item.item_type == 'special':
+                if item.agent_list[0] == self.agent_name:
+                    item.agent_list.pop(0)
+
+                    if len(item.agent_list) == 0:
+                        obs = f"You have arrived at position {self.position} and pick up an item. There are no more items at position {self.position}"
+                        if self._parentMaze.visual:
+                            self._parentMaze.item_positions[self.position].figure_agent.kill()
+                        del self._parentMaze.item_positions[self.position]
+                        self._parentMaze.score += 1
+
+                    else:
+                        obs = f"You have arrived at position {self.position} and process an item. The next agent that could process / pick up this item in {item.agent_list[0]}"
+                        if self._parentMaze.visual:
+                            self._parentMaze.item_positions[self.position].figure_agent.add_text(str(len(item.agent_list)))
+
+                else:
+                    obs = f"You have arrived at position {self.position} and fail to process the item. The next agent that could process / pick up this item in {item.agent_list[0]}"
+
+            elif item.item_type == 'heavy':
+                if self._parentMaze.agent_positions.count(self.position) >= item.agents_per_item:
+                    obs = f"You have arrived at position {self.position} and pick up an item."
+                    if self._parentMaze.visual:
+                        self._parentMaze.item_positions[self.position].figure_agent.kill()
+                    del self._parentMaze.item_positions[self.position]
+                    self._parentMaze.score += 1
+                
+                else:
+                    obs = f"You have arrived at position {self.position} and fail to pick the heavy item. This item requires {item.agents_per_item} agents in toatl to pick up"
+
+            elif item.item_type == 'valuable':
+                obs = f"You have arrived at position {self.position} and pick up an item. This item's type is {item.value_type} and the value of this item is {item.agent_value[self.agent_name]}"
+                self._parentMaze.score += item.agent_value[self.agent_name]
+                if self._parentMaze.visual:
+                    self._parentMaze.item_positions[self.position].figure_agent.kill()
+                del self._parentMaze.item_positions[self.position]
+
+        else:
+            obs = f"Pick failed, item not available or no item found in position {self.position}"
+        if len(self._parentMaze.item_positions) == 0:
+            self._parentMaze.finish = True
+
+        return obs
+
+    def kill(self):
+        for i in range(len(self._body)):
+            self._parentMaze._canvas.delete(self._body[i])
+
+        self._parentMaze._canvas.delete(self._head) 
+
+        if(hasattr(self,'_text')):
+            self._parentMaze._canvas.delete(self._text) 
+
+class Item:
+    '''
+    This is the main class to create item.
+    '''
+    
+    def __init__(self,parentMaze,x=None,y=None,shape='square',color:COLOR=COLOR.red, args=None):
+        self._parentMaze=parentMaze
+        self.color=color
+        if(isinstance(color,str)):
+            if(color in COLOR.__members__):
+                self.color=COLOR[color]
+            else:
+                raise ValueError(f'{color} is not a valid COLOR!')
+        self.shape=shape
+        self._orient=0
+        if x is None:x=parentMaze.rows
+        if y is None:y=parentMaze.cols
+        self.x=x
+        self.y=y
+        self._body=[]
+        self.position=(self.x,self.y)
+        self.args = args
+        self.item_type = args.item_type
+
+class regularItem(Item):
+
+    def __init__(self,parentMaze,x=None,y=None,shape='square',color:COLOR=COLOR.green, args=None):
+        super().__init__(parentMaze=parentMaze, x=x,y=y,shape=shape,color=color, args=args)
+        self.figure_agent = agent(self._parentMaze, x=x, y=y, shape="square", filled="center", footprints=False, color=color)
+
+class specialItem(Item):
+
+    def __init__(self,parentMaze,x=None,y=None,shape='square',color:COLOR=COLOR.yellow, args=None, agent_list=[]):
+        super().__init__(parentMaze=parentMaze, x=x,y=y,shape=shape,color=color, args=args)
+        self.agent_list = agent_list
+        self.figure_agent = agent(self._parentMaze, x=x, y=y, shape="square", filled="center", footprints=False, color=color)
+        self.figure_agent.add_text(str(args.item_phase))
+
+class heavyItem(Item):
+
+    def __init__(self,parentMaze,x=None,y=None,shape='square',color:COLOR=COLOR.green, args=None, agents_per_item=1):
+        super().__init__(parentMaze=parentMaze, x=x,y=y,shape=shape,color=color, args=args)
+        self.agents_per_item = agents_per_item
+        self.figure_agent = agent(self._parentMaze, x=x, y=y, shape="square", filled="big", footprints=False, color=color)
+        self.figure_agent.add_text(str(agents_per_item))
+
+class valuableItem(Item):
+
+    def __init__(self,parentMaze,x=None,y=None,shape='square',color:COLOR=COLOR.green, args=None, agent_value=None, value_type=None):
+        super().__init__(parentMaze=parentMaze, x=x,y=y,shape=shape,color=color, args=args)
+        self.agent_value = agent_value
+        self.value_type = value_type
+        self.figure_agent = agent(self._parentMaze, x=x, y=y, shape="square", filled="center", footprints=False, color=color)
+        self.figure_agent.add_text(str(value_type))
 
 class maze:
     '''
@@ -363,11 +501,13 @@ class maze:
         self._win=None 
         self._canvas=None
         self._agents=[]
+        self._items=[]
         self.markCells=[]
         self.item_positions = []
         self.score=0
         self.finish = False
         self.dialogue_history = []
+
     
     def find_neighbors(self,position):
         x, y = position
@@ -440,20 +580,72 @@ class maze:
         if x+1<=self.rows:
             self.maze_map[x+1,y]['N']=1
     
-    def SetItems(self, num_items, initial_position, color:COLOR=COLOR.red):
-        self.num_items = num_items
+    def SetItems(self, args, color:COLOR=COLOR.yellow):
+        self.num_items = args.num_items
         self.item_agents = {}
-        self.item_positions = set()
-        while len(self.item_positions) < num_items:
-            new_position = (random.randint(1, self.rows), random.randint(1, self.cols))
-            if new_position in initial_position or new_position in self.item_positions:
-                continue
-            self.item_positions.add(new_position)
-        
-        self.item_positions = list(self.item_positions)
+        self.item_positions = {}
+        random.seed(args.seed)
+        if args.item_type == 'regular':
+            self.item = regularItem
+            self.extra_args = [{} for _ in range(args.num_items)]
+        elif args.item_type == 'special':
+            self.item = specialItem
 
-        for i in range(num_items):
-            self.item_agents[self.item_positions[i]] = agent(self, x=self.item_positions[i][0], y=self.item_positions[i][1], shape="square", footprints=True, color=color)
+            if args.item_phase >= args.num_items:
+                agent_names = id2name[:args.num_agents]
+                for i in range(args.num_items):
+                    random_list = agent_names 
+                    random.shuffle(random_list)
+                    self.extra_args.append({
+                        "agent_list": random_list[:args.item_phase]
+                    })
+            else:
+                agent_names = id2name[:args.num_agents]
+                for i in range(args.num_items):
+                    random_list = [random.choice(agent_names) for _ in range(args.item_phase)]
+                    self.extra_args.append({
+                        "agent_list": random_list[:args.item_phase]
+                    })
+
+
+        elif args.item_type == 'heavy':
+            self.item = heavyItem
+            self.extra_args = [{"agents_per_item": args.agents_per_item} for _ in range(args.num_items)]
+        elif args.item_type == 'valuable':
+            self.item = valuableItem
+
+            base_number = args.num_items // args.value_types
+            remaining_number = args.num_items % args.value_types
+            each_item_type = [base_number] * args.value_types
+
+            for i in range(remaining_number):
+                each_item_type[i] += 1
+
+            self.extra_args = []
+            for i in range(args.value_types):
+                values = [j+1 for j in range(args.num_agents)]
+                random.shuffle(values)
+                agent_value = {id2name[i]: values[i] for i in range(len(values))}
+                
+                for _ in range(each_item_type[i]):
+                    self.extra_args.append({
+                        "agent_value": agent_value,
+                        "value_type": i+1
+                    })
+
+
+        while len(self.item_positions) < self.num_items:
+            new_position = (random.randint(1, self.rows), random.randint(1, self.cols))
+            if new_position in self.item_positions or new_position == (1, 1):
+                continue
+            self.item_positions[new_position] = self.item(self,x=new_position[0],y=new_position[1],shape='square',color=color, args=args, **self.extra_args[len(self.item_positions)])
+            self._items.append(self.item_positions[new_position])
+    
+
+        # for i in range(self.num_items):
+        #     self.item_agents[self.item_positions[i]] = agent(self, x=self.item_positions[i][0], y=self.item_positions[i][1], shape="square", footprints=True, color=color)
+
+        return self.item_positions
 
     def CreateMaze(self,x=1,y=1,pattern=None,loopPercent=0,saveMaze=False,loadMaze=None,theme:COLOR=COLOR.dark,seed=None):
         '''
@@ -710,11 +902,14 @@ class maze:
 
         if self.visual:
             self._drawMaze(self.theme)
-            agent(self,*self._goal,shape='square',filled=True,color=COLOR.green)
+        #     agent(self,*self._goal,shape='square',filled='all',color=COLOR.green)
 
         if saveMaze:
             # dt_string = datetime.datetime.now().strftime("%Y-%m-%d--%H-%M-%S")
-            with open(f'maze-{self.rows}-{self.cols}-{seed}.csv','w',newline='') as f:
+            if not os.path.exists(f'maze-{self.rows}-{self.cols}'):
+                os.makedirs(f'maze-{self.rows}-{self.cols}')
+
+            with open(f'maze-{self.rows}-{self.cols}/{seed}.csv','w',newline='') as f:
             # with open(f'maze--{dt_string}.csv','w',newline='') as f:
                 writer=csv.writer(f)
                 writer.writerow(['  cell  ','E','W','N','S'])
@@ -815,194 +1010,194 @@ class maze:
 
 
 
-    _tracePathList=[]
-    def _tracePathSingle(self,a,p,kill,showMarked,delay):
-        '''
-        An interal method to help tracePath method for tracing a path by agent.
-        '''
+    # _tracePathList=[]
+    # def _tracePathSingle(self,a,p,kill,showMarked,delay):
+    #     '''
+    #     An interal method to help tracePath method for tracing a path by agent.
+    #     '''
         
-        def killAgent(a):
-            '''
-            if the agent should be killed after it reaches the Goal or completes the path
-            '''
-            for i in range(len(a._body)):
-                self._canvas.delete(a._body[i])
-            self._canvas.delete(a._head) 
-        w=self._cell_width
-        if((a.x,a.y) in self.markCells and showMarked):
-            w=self._cell_width
-            x=a.x*w-w+self._LabWidth
-            y=a.y*w-w+self._LabWidth
-            self._canvas.create_oval(y + w/2.5+w/20, x + w/2.5+w/20,y + w/2.5 +w/4-w/20, x + w/2.5 +w/4-w/20,fill='red',outline='red',tag='ov')
-            self._canvas.tag_raise('ov')
+    #     def killAgent(a):
+    #         '''
+    #         if the agent should be killed after it reaches the Goal or completes the path
+    #         '''
+    #         for i in range(len(a._body)):
+    #             self._canvas.delete(a._body[i])
+    #         self._canvas.delete(a._head) 
+    #     w=self._cell_width
+    #     if((a.x,a.y) in self.markCells and showMarked):
+    #         w=self._cell_width
+    #         x=a.x*w-w+self._LabWidth
+    #         y=a.y*w-w+self._LabWidth
+    #         self._canvas.create_oval(y + w/2.5+w/20, x + w/2.5+w/20,y + w/2.5 +w/4-w/20, x + w/2.5 +w/4-w/20,fill='red',outline='red',tag='ov')
+    #         self._canvas.tag_raise('ov')
        
-        if (a.x,a.y)==(a.goal):
-            del maze._tracePathList[0][0][a]
-            if maze._tracePathList[0][0]=={}:
-                del maze._tracePathList[0]
-                if len(maze._tracePathList)>0:
-                    self.tracePath(maze._tracePathList[0][0],kill=maze._tracePathList[0][1],delay=maze._tracePathList[0][2])
-            if kill:
-                self._win.after(300, killAgent,a)         
-            return
-        # If path is provided as Dictionary
-        if(type(p)==dict):
-            if(len(p)==0):
-                del maze._tracePathList[0][0][a]
-                return
-            if a.shape=='arrow':
-                old=(a.x,a.y)
-                new=p[(a.x,a.y)]
-                o=a._orient
+    #     if (a.x,a.y)==(a.goal):
+    #         del maze._tracePathList[0][0][a]
+    #         if maze._tracePathList[0][0]=={}:
+    #             del maze._tracePathList[0]
+    #             if len(maze._tracePathList)>0:
+    #                 self.tracePath(maze._tracePathList[0][0],kill=maze._tracePathList[0][1],delay=maze._tracePathList[0][2])
+    #         if kill:
+    #             self._win.after(300, killAgent,a)         
+    #         return
+    #     # If path is provided as Dictionary
+    #     if(type(p)==dict):
+    #         if(len(p)==0):
+    #             del maze._tracePathList[0][0][a]
+    #             return
+    #         if a.shape=='arrow':
+    #             old=(a.x,a.y)
+    #             new=p[(a.x,a.y)]
+    #             o=a._orient
                 
-                if old!=new:
-                    if old[0]==new[0]:
-                        if old[1]>new[1]:
-                            mov=3#'W' #3
-                        else:
-                            mov=1#'E' #1
-                    else:
-                        if old[0]>new[0]:
-                            mov=0#'N' #0
+    #             if old!=new:
+    #                 if old[0]==new[0]:
+    #                     if old[1]>new[1]:
+    #                         mov=3#'W' #3
+    #                     else:
+    #                         mov=1#'E' #1
+    #                 else:
+    #                     if old[0]>new[0]:
+    #                         mov=0#'N' #0
 
-                        else:
-                            mov=2#'S' #2
-                    if mov-o==2:
-                        a._RCW()
+    #                     else:
+    #                         mov=2#'S' #2
+    #                 if mov-o==2:
+    #                     a._RCW()
 
-                    if mov-o==-2:
-                        a._RCW()
-                    if mov-o==1:
-                        a._RCW()
-                    if mov-o==-1:
-                        a._RCCW()
-                    if mov-o==3:
-                        a._RCCW()
-                    if mov-o==-3:
-                        a._RCW()
-                    if mov==o:
-                        a.x,a.y=p[(a.x,a.y)]
-                else:
-                    del p[(a.x,a.y)]
-            else:    
-                a.x,a.y=p[(a.x,a.y)]
-        # If path is provided as String
-        if (type(p)==str):
-            if(len(p)==0):
-                del maze._tracePathList[0][0][a]
-                if maze._tracePathList[0][0]=={}:
-                    del maze._tracePathList[0]
-                    if len(maze._tracePathList)>0:
-                        self.tracePath(maze._tracePathList[0][0],kill=maze._tracePathList[0][1],delay=maze._tracePathList[0][2])
-                if kill:
+    #                 if mov-o==-2:
+    #                     a._RCW()
+    #                 if mov-o==1:
+    #                     a._RCW()
+    #                 if mov-o==-1:
+    #                     a._RCCW()
+    #                 if mov-o==3:
+    #                     a._RCCW()
+    #                 if mov-o==-3:
+    #                     a._RCW()
+    #                 if mov==o:
+    #                     a.x,a.y=p[(a.x,a.y)]
+    #             else:
+    #                 del p[(a.x,a.y)]
+    #         else:    
+    #             a.x,a.y=p[(a.x,a.y)]
+    #     # If path is provided as String
+    #     if (type(p)==str):
+    #         if(len(p)==0):
+    #             del maze._tracePathList[0][0][a]
+    #             if maze._tracePathList[0][0]=={}:
+    #                 del maze._tracePathList[0]
+    #                 if len(maze._tracePathList)>0:
+    #                     self.tracePath(maze._tracePathList[0][0],kill=maze._tracePathList[0][1],delay=maze._tracePathList[0][2])
+    #             if kill:
                     
-                    self._win.after(300, killAgent,a)         
-                return
-            if a.shape=='arrow':
-                old=(a.x,a.y)
-                new=p[0]
-                o=a._orient
-                if new=='N': mov=0
-                elif new=='E': mov=1
-                elif new=='S': mov=2
-                elif new=='W': mov=3
+    #                 self._win.after(300, killAgent,a)         
+    #             return
+    #         if a.shape=='arrow':
+    #             old=(a.x,a.y)
+    #             new=p[0]
+    #             o=a._orient
+    #             if new=='N': mov=0
+    #             elif new=='E': mov=1
+    #             elif new=='S': mov=2
+    #             elif new=='W': mov=3
                 
-                if mov-o==2:
-                    a._RCW()
+    #             if mov-o==2:
+    #                 a._RCW()
 
-                if mov-o==-2:
-                    a._RCW()
-                if mov-o==1:
-                    a._RCW()
-                if mov-o==-1:
-                    a._RCCW()
-                if mov-o==3:
-                    a._RCCW()
-                if mov-o==-3:
-                    a._RCW()
-            if a.shape=='square' or mov==o:    
-                move=p[0]
-                if move=='E':
-                    if a.y+1<=self.cols:
-                        a.y+=1
-                elif move=='W':
-                    if a.y-1>0:
-                        a.y-=1
-                elif move=='N':
-                    if a.x-1>0:
-                        a.x-=1
-                        a.y=a.y
-                elif move=='S':
-                    if a.x+1<=self.rows:
-                        a.x+=1
-                        a.y=a.y
-                elif move=='C':
-                    a._RCW()
-                elif move=='A':
-                    a._RCCW()
-                p=p[1:]
-        # If path is provided as List
-        if (type(p)==list):
-            if(len(p)==0):
-                del maze._tracePathList[0][0][a]
-                if maze._tracePathList[0][0]=={}:
-                    del maze._tracePathList[0]
-                    if len(maze._tracePathList)>0:
-                        self.tracePath(maze._tracePathList[0][0],kill=maze._tracePathList[0][1],delay=maze._tracePathList[0][2])
-                if kill:                    
-                    self._win.after(300, killAgent,a)  
-                return
-            if a.shape=='arrow':
-                old=(a.x,a.y)
-                new=p[0]
-                o=a._orient
+    #             if mov-o==-2:
+    #                 a._RCW()
+    #             if mov-o==1:
+    #                 a._RCW()
+    #             if mov-o==-1:
+    #                 a._RCCW()
+    #             if mov-o==3:
+    #                 a._RCCW()
+    #             if mov-o==-3:
+    #                 a._RCW()
+    #         if a.shape=='square' or mov==o:    
+    #             move=p[0]
+    #             if move=='E':
+    #                 if a.y+1<=self.cols:
+    #                     a.y+=1
+    #             elif move=='W':
+    #                 if a.y-1>0:
+    #                     a.y-=1
+    #             elif move=='N':
+    #                 if a.x-1>0:
+    #                     a.x-=1
+    #                     a.y=a.y
+    #             elif move=='S':
+    #                 if a.x+1<=self.rows:
+    #                     a.x+=1
+    #                     a.y=a.y
+    #             elif move=='C':
+    #                 a._RCW()
+    #             elif move=='A':
+    #                 a._RCCW()
+    #             p=p[1:]
+    #     # If path is provided as List
+    #     if (type(p)==list):
+    #         if(len(p)==0):
+    #             del maze._tracePathList[0][0][a]
+    #             if maze._tracePathList[0][0]=={}:
+    #                 del maze._tracePathList[0]
+    #                 if len(maze._tracePathList)>0:
+    #                     self.tracePath(maze._tracePathList[0][0],kill=maze._tracePathList[0][1],delay=maze._tracePathList[0][2])
+    #             if kill:                    
+    #                 self._win.after(300, killAgent,a)  
+    #             return
+    #         if a.shape=='arrow':
+    #             old=(a.x,a.y)
+    #             new=p[0]
+    #             o=a._orient
                 
-                if old!=new:
-                    if old[0]==new[0]:
-                        if old[1]>new[1]:
-                            mov=3#'W' #3
-                        else:
-                            mov=1#'E' #1
-                    else:
-                        if old[0]>new[0]:
-                            mov=0#'N' #0
+    #             if old!=new:
+    #                 if old[0]==new[0]:
+    #                     if old[1]>new[1]:
+    #                         mov=3#'W' #3
+    #                     else:
+    #                         mov=1#'E' #1
+    #                 else:
+    #                     if old[0]>new[0]:
+    #                         mov=0#'N' #0
 
-                        else:
-                            mov=2#'S' #2
-                    if mov-o==2:
-                        a._RCW()
+    #                     else:
+    #                         mov=2#'S' #2
+    #                 if mov-o==2:
+    #                     a._RCW()
 
-                    elif mov-o==-2:
-                        a._RCW()
-                    elif mov-o==1:
-                        a._RCW()
-                    elif mov-o==-1:
-                        a._RCCW()
-                    elif mov-o==3:
-                        a._RCCW()
-                    elif mov-o==-3:
-                        a._RCW()
-                    elif mov==o:
-                        a.x,a.y=p[0]
-                        del p[0]
-                else:
-                    del p[0]
-            else:    
-                a.x,a.y=p[0]
-                del p[0]
+    #                 elif mov-o==-2:
+    #                     a._RCW()
+    #                 elif mov-o==1:
+    #                     a._RCW()
+    #                 elif mov-o==-1:
+    #                     a._RCCW()
+    #                 elif mov-o==3:
+    #                     a._RCCW()
+    #                 elif mov-o==-3:
+    #                     a._RCW()
+    #                 elif mov==o:
+    #                     a.x,a.y=p[0]
+    #                     del p[0]
+    #             else:
+    #                 del p[0]
+    #         else:    
+    #             a.x,a.y=p[0]
+    #             del p[0]
 
-        self._win.after(delay, self._tracePathSingle,a,p,kill,showMarked,delay)    
+    #     self._win.after(delay, self._tracePathSingle,a,p,kill,showMarked,delay)    
 
-    def tracePath(self,d,kill=False,delay=300,showMarked=False):
-        '''
-        A method to trace path by agent
-        You can provide more than one agent/path details
-        '''
-        self._tracePathList.append((d,kill,delay))
-        if maze._tracePathList[0][0]==d: 
-            for a,p in d.items():
-                if a.goal!=(a.x,a.y) and len(p)!=0:
-                    self._tracePathSingle(a,p,kill,showMarked,delay)
+    # def tracePath(self,d,kill=False,delay=300,showMarked=False):
+    #     '''
+    #     A method to trace path by agent
+    #     You can provide more than one agent/path details
+    #     '''
+    #     self._tracePathList.append((d,kill,delay))
+    #     if maze._tracePathList[0][0]==d: 
+    #         for a,p in d.items():
+    #             if a.goal!=(a.x,a.y) and len(p)!=0:
+    #                 self._tracePathSingle(a,p,kill,showMarked,delay)
     def run(self):
         '''
         Finally to run the Tkinter Main Loop

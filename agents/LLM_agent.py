@@ -1,26 +1,19 @@
 from agents.LLM import *
-from maze import id2name
+from agents.Base_agent import base_agent
 import pandas as pd
 
-class llm_agent:
+class llm_agent(base_agent):
 	"""
 	LLM agent class
 	"""
 	def __init__(self, maze_agent, agent_id):
-		self._mazeAgent = maze_agent
-		self.args = self._mazeAgent.args
-		self.agent_id = agent_id
-		self.agent_name = id2name[agent_id]
-		self.other_agent_name = id2name[:agent_id] + id2name[agent_id+1:self.args.num_agents]
+		super().__init__(maze_agent, agent_id)
 		self.lm_id = self.args.agent_lm_id
 		self.communication = self.args.communication
-		self.total_cost = 0
-		self.steps = 0
 		self.obs = self._mazeAgent.move(str(self._mazeAgent.position))
 		self.last_action = None
 		self.LLM = LLM(self.lm_id, self.communication, self.agent_id)
 		self.prompt_template_path = self.args.prompt_template_path
-		self.action_history = ["[MOVE] " + str(self._mazeAgent.position)]
 		self.agent_info = {}
 		
 		df = pd.read_csv(self.prompt_template_path)

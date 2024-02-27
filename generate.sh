@@ -1,8 +1,8 @@
-for sd in {1..10}
+for sd in {1..20}
 do
     python generate_maze.py \
-    --rows 20 \
-    --columns 20 \
+    --rows 30 \
+    --columns 30 \
     --visual \
     --seed $sd
 done
