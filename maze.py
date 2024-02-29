@@ -407,7 +407,8 @@ class agent:
 
         if len(neighbors) <= len(set(neighbors) & set(self.dead_end).union(others_dead_end)) + 1:
             if self.position not in self._parentMaze.item_positions:
-                self.add_dead_end(self.position)
+                if len(set(self._parentMaze.find_neighbors(self.position)[0]).intersection(set(self._parentMaze.agent_positions))) == 0:
+                    self.add_dead_end(self.position)
 
     def kill(self):
         for i in range(len(self._body)):
