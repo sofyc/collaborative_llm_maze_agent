@@ -67,6 +67,7 @@ for i in range(args.num_agents):
     a = agent(m, x=initial_position[i][0], y=initial_position[i][1], shape="arrow", color=colors[i], args=args)
     m._agents.append(a)
     a.move(str(initial_position[i]))
+    a.check_dead_end()
     agents.append(maze_agent(a, i))
 
 task_description = ""
@@ -86,7 +87,7 @@ for r in range(args.total_steps // args.num_agents):
             m._canvas.update()
 
             if args.agent_type == "dfs":
-                time.sleep(0.1)
+                time.sleep(0.05)
 
         if agent._mazeAgent._parentMaze.finish:
             finish = True

@@ -12,9 +12,9 @@ do
         --random_initial_position \
         --num_agents 4 \
         --remember_dead_end \
-        --num_items 8 \
-        --value_types 5 \
-        --item_type valuable \
+        --num_items 4 \
+        --item_type special \
+        --item_phase 3 \
         --total_steps 80000 \
         --debug \
         --seed $maze \

@@ -115,17 +115,18 @@ class agent:
         self._body=[]
         self.position=(self.x,self.y)
         self._path=[]
-        self.dead_end = set()
-        self.dead_end_agent = []
+        self.dead_end = {}
+        self.dead_end_agent = {}
         self.args = args
         self.visited = set()
 
 
     def add_dead_end(self,position):
-        self.dead_end.add(position)
+        # self.dead_end.add(position)
+        self.dead_end[position] = self._parentMaze.total_step
         if self._parentMaze.visual:
             a = agent(self._parentMaze,*position,shape='square',filled='left_top',color=COLOR.red)
-            self.dead_end_agent.append(a)
+            self.dead_end_agent[position] = a
         
     @property
     def x(self):
@@ -329,16 +330,6 @@ class agent:
         ]
         if (x, y) not in self._look()[0] and (x, y) != self.position:
             return f"Move failed. Possible next positions are " + ", ".join([str(p) for p in self._look()[0]])
-        neighbors = self._parentMaze.find_neighbors((x, y))[0]
-        
-        if self.args.remember_dead_end:
-            others_dead_end = set()
-            for agent in self._parentMaze._agents:
-                if agent != self:
-                    others_dead_end = others_dead_end.union(agent.dead_end)
-
-            if len(neighbors) <= len(set(neighbors) & self.dead_end.union(others_dead_end)) + 1:
-                self.add_dead_end((x, y))
 
         self.position = (x, y)
         self._path.append((x, y))
@@ -374,7 +365,7 @@ class agent:
                     else:
                         obs = f"You have arrived at position {self.position} and process an item. The next agent that could process / pick up this item in {item.agent_list[0]}"
                         if self._parentMaze.visual:
-                            self._parentMaze.item_positions[self.position].figure_agent.add_text(str(len(item.agent_list)))
+                            self._parentMaze.item_positions[self.position].figure_agent.add_text(("-".join(item.agent_list)))
 
                 else:
                     obs = f"You have arrived at position {self.position} and fail to process the item. The next agent that could process / pick up this item in {item.agent_list[0]}"
@@ -399,10 +390,24 @@ class agent:
 
         else:
             obs = f"Pick failed, item not available or no item found in position {self.position}"
+
         if len(self._parentMaze.item_positions) == 0:
             self._parentMaze.finish = True
 
         return obs
+
+    def check_dead_end(self):
+        neighbors = self._parentMaze.find_neighbors(self.position)[0]
+
+
+        others_dead_end = set()
+        for agent in self._parentMaze._agents:
+            if agent != self:
+                others_dead_end = others_dead_end.union(set(agent.dead_end))
+
+        if len(neighbors) <= len(set(neighbors) & set(self.dead_end).union(others_dead_end)) + 1:
+            if self.position not in self._parentMaze.item_positions:
+                self.add_dead_end(self.position)
 
     def kill(self):
         for i in range(len(self._body)):
@@ -449,7 +454,7 @@ class specialItem(Item):
         super().__init__(parentMaze=parentMaze, x=x,y=y,shape=shape,color=color, args=args)
         self.agent_list = agent_list
         self.figure_agent = agent(self._parentMaze, x=x, y=y, shape="square", filled="center", footprints=False, color=color)
-        self.figure_agent.add_text(str(args.item_phase))
+        self.figure_agent.add_text("-".join(self.agent_list))
 
 class heavyItem(Item):
 
@@ -507,9 +512,11 @@ class maze:
         self.score=0
         self.finish = False
         self.dialogue_history = []
+        self.total_step = 0
 
     
     def find_neighbors(self,position):
+        print(position)
         x, y = position
         possible_next_positions = []
         possible_next_directions = []
@@ -585,13 +592,14 @@ class maze:
         self.item_agents = {}
         self.item_positions = {}
         random.seed(args.seed)
+        self.extra_args = []
         if args.item_type == 'regular':
             self.item = regularItem
             self.extra_args = [{} for _ in range(args.num_items)]
         elif args.item_type == 'special':
             self.item = specialItem
 
-            if args.item_phase >= args.num_items:
+            if args.item_phase <= args.num_agents:
                 agent_names = id2name[:args.num_agents]
                 for i in range(args.num_items):
                     random_list = agent_names 
@@ -621,7 +629,6 @@ class maze:
             for i in range(remaining_number):
                 each_item_type[i] += 1
 
-            self.extra_args = []
             for i in range(args.value_types):
                 values = [j+1 for j in range(args.num_agents)]
                 random.shuffle(values)
