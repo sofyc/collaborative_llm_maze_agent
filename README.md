@@ -51,8 +51,9 @@ python run_maze.py \
 --num_agents 4 \
 --num_items 4 \
 --visual \
---communication direct \
---prompt_template_path agents/prompt_com.csv \
+--communication always \
+--prompt_template_path agents/prompt_com_regular.csv \
 --agent_lm_id  gpt-35-turbo-1106 \
---load_maze maze--2024-01-26--04-38-33.csv
+--random_initial_position \
+--maze_seed 1
 ```

@@ -1,6 +1,7 @@
 import random
 from agents.Base_agent import base_agent
 import collections
+from maze import id2name
 
 class dfs_agent(base_agent):
 	"""
@@ -8,6 +9,8 @@ class dfs_agent(base_agent):
 	"""
 	def __init__(self, maze_agent, agent_id):
 		super().__init__(maze_agent, agent_id)
+		self.id2name = id2name
+		self.agent_name = self.id2name[agent_id]
 		self.history_locations = [maze_agent.position]
 
 	def run(self):
