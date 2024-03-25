@@ -7,11 +7,9 @@ Progress: $PROGRESS$
 Previous actions: $ACTION_HISTORY$
 Available actions:
 $AVAILABLE_ACTIONS$
-
 Here are some helpful rules to search the maze, I must examine these rules one by one when choosing actions:
-1. Always move to unexplored positions if possible.
-2. Never move to positions that lead to a dead end confirmed by myself.
+1. Always pick up items in my current positions if possible to accumulate scores.
+2. Never move to positions that lead to a dead end.
 3. When I can move to multiple positions that don't lead to a dead end, do not repeat previous actions and do not move to positions that have been explored.
 
 Note: Remember to include the letter option in answer."
-goal,"Find all the items in the maze. Items are randomly generated in the maze."

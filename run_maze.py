@@ -23,7 +23,7 @@ parser.add_argument('--item_type', default='regular', choices=['regular', 'speci
 parser.add_argument("--item_phase", type=int, default=1)
 parser.add_argument('--value_types', type=int, default=1)
 parser.add_argument("--agents_per_item", type=int, default=1)
-parser.add_argument('--communication', default='no', choices=['no', 'direct', 'monitor', 'always'], help='the ways agent communicate')
+parser.add_argument('--communication', default='no', choices=['no', 'optional', 'audit', 'always'], help='the ways agent communicate')
 parser.add_argument('--cot', action="store_true", help='use cot')
 parser.add_argument('--remember_dead_end', action="store_true", help='remember and share dead end in a maze')
 parser.add_argument('--prompt_template_path', default=None, help='path to prompt template file')
@@ -55,7 +55,6 @@ if args.random_initial_position:
 else:
     initial_position = [(1, 1) for _ in range(args.num_agents)]
 
-
 agents = []
 colors = [color for color in COLOR][5:]
 if args.agent_type == "llm":
@@ -65,10 +64,12 @@ elif args.agent_type == "dfs":
 
 for i in range(args.num_agents):
     a = agent(m, x=initial_position[i][0], y=initial_position[i][1], shape="arrow", color=colors[i], args=args)
-    m._agents.append(a)
+    # m._agents.append(a)
     a.move(str(initial_position[i]))
     a.check_dead_end()
     agents.append(maze_agent(a, i))
+
+m._agents = agents
 
 task_description = ""
 if args.visual:
@@ -101,16 +102,15 @@ for r in range(args.total_steps // args.num_agents):
 
 total_cost = sum([a.total_cost for a in agents])
 total_steps = sum([a.steps for a in agents])
-print(f"Finished.\nTotal steps: {total_steps}\nTotal cost: {total_cost}\nScore: {m.score}/{args.num_items}")
-# print(total_steps)
+# print(f"Finished.\nTotal steps: {total_steps}\nTotal cost: {total_cost}\nScore: {m.score}/{m.total_scores}")
+# print(m.score)
+print(total_steps)
 
 if args.save_result:
     save_info['cost'] = total_cost
     save_info['steps'] = total_steps
     save_info['scores'] = m.score
     save_info['args'] = vars(args)
-
-
 
     current_time = datetime.datetime.now()
     year = current_time.year
@@ -122,9 +122,9 @@ if args.save_result:
     formatted_time = f"{year}-{month:02d}-{day:02d}-{hour:02d}:{minute:02d}:{second:02d}"
 
     if args.agent_type == "dfs":
-        result_file = f"results_{args.agent_type}/{args.num_agents}_{args.num_items}_{args.load_maze}_{formatted_time}.json"
+        result_file = f"results_{args.agent_type}/{args.num_agents}_{args.num_items}_{args.item_type}_{args.maze_seed}_{formatted_time}.json"
     else:
-        result_file = f"results_{args.agent_type}/{args.agent_lm_id}_{args.communication}_{args.num_agents}_{args.num_items}_{args.load_maze}_{formatted_time}.json"
+        result_file = f"results_{args.agent_type}/{args.agent_lm_id}_{args.communication}_{args.num_agents}_{args.num_items}_{args.item_type}_{args.maze_seed}_{formatted_time}.json"
 
-    # with open(result_file, "w") as f:
-    #     f.write(json.dumps(save_info, indent=4))
+    with open(result_file, "w") as f:
+        f.write(json.dumps(save_info, indent=4))

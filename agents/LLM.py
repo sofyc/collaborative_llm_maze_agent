@@ -8,6 +8,8 @@ import pandas as pd
 from openai import OpenAIError
 from openai import RateLimitError
 import backoff
+from datetime import timedelta
+from ratelimit import limits, sleep_and_retry
 
 from openai import AzureOpenAI
 client = AzureOpenAI(
@@ -30,6 +32,8 @@ class LLM:
 		self.total_cost = 0
 		# self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+	@sleep_and_retry
+	@limits(calls=60, period=timedelta(seconds=60).total_seconds())
 	@backoff.on_exception(backoff.expo, RateLimitError)
 	def generate(self, prompt, sampling_params):
 		usage = 0

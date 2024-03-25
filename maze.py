@@ -122,7 +122,6 @@ class agent:
 
 
     def add_dead_end(self,position):
-        # self.dead_end.add(position)
         self.dead_end[position] = self._parentMaze.total_step
         if self._parentMaze.visual:
             a = agent(self._parentMaze,*position,shape='square',filled='left_top',color=COLOR.red)
@@ -337,15 +336,25 @@ class agent:
 
         if self._parentMaze.visual:
             self._parentMaze._win.update()
+        
+        obs = f"I moved to position {self.position}."
 
-        return f"You moved to position {self.position}. "
+        for neighbor in self._parentMaze.find_neighbors(self.position)[0]:
+            if neighbor in self._parentMaze.item_positions:
+                obs += f" I can see an item in position {neighbor}."
+        
+        if self.position in self._parentMaze.item_positions:
+            obs += f" I can see an item in my current position {self.position} available for being picked up. " + self._parentMaze.item_positions[self.position].info()
+
+
+        return obs
     
     def pick(self) -> str:
 
         if self.position in self._parentMaze.item_positions:
             item = self._parentMaze.item_positions[self.position]
             if item.item_type == 'regular':
-                obs = f"You have arrived at position {self.position} and pick up an item."
+                obs = f"I successfully pick up an item."
                 if self._parentMaze.visual:
                     self._parentMaze.item_positions[self.position].figure_agent.kill()
                 del self._parentMaze.item_positions[self.position]
@@ -356,40 +365,40 @@ class agent:
                     item.agent_list.pop(0)
 
                     if len(item.agent_list) == 0:
-                        obs = f"You have arrived at position {self.position} and pick up an item. There are no more items at position {self.position}"
+                        obs = f"I successfully pick up a special item. There are no more items at position {self.position}"
                         if self._parentMaze.visual:
                             self._parentMaze.item_positions[self.position].figure_agent.kill()
                         del self._parentMaze.item_positions[self.position]
                         self._parentMaze.score += 1
 
                     else:
-                        obs = f"You have arrived at position {self.position} and process an item. The next agent that could process / pick up this item in {item.agent_list[0]}"
+                        obs = f"I successfully pick up a special item. The next agent that could pick up this item is {item.agent_list[0]}"
                         if self._parentMaze.visual:
                             self._parentMaze.item_positions[self.position].figure_agent.add_text(("-".join(item.agent_list)))
 
                 else:
-                    obs = f"You have arrived at position {self.position} and fail to process the item. The next agent that could process / pick up this item in {item.agent_list[0]}"
+                    obs = f"I fail to pick up the special item. The next agent that could pick up this item is {item.agent_list[0]}"
 
             elif item.item_type == 'heavy':
                 if self._parentMaze.agent_positions.count(self.position) >= item.agents_per_item:
-                    obs = f"You have arrived at position {self.position} and pick up an item."
+                    obs = f"I successfully pick up a heavy item."
                     if self._parentMaze.visual:
                         self._parentMaze.item_positions[self.position].figure_agent.kill()
                     del self._parentMaze.item_positions[self.position]
                     self._parentMaze.score += 1
                 
                 else:
-                    obs = f"You have arrived at position {self.position} and fail to pick the heavy item. This item requires {item.agents_per_item} agents in toatl to pick up"
+                    obs = f"I fail to pick up the heavy item. This item requires {item.agents_per_item} agents in toatl to pick up."
 
             elif item.item_type == 'valuable':
-                obs = f"You have arrived at position {self.position} and pick up an item. This item's type is {item.value_type} and the value of this item is {item.agent_value[self.agent_name]}"
+                obs = f"I successfully pick up an item. This item's type is {item.value_type} and the value of this item is {item.agent_value[self.agent_name]}"
                 self._parentMaze.score += item.agent_value[self.agent_name]
                 if self._parentMaze.visual:
                     self._parentMaze.item_positions[self.position].figure_agent.kill()
                 del self._parentMaze.item_positions[self.position]
 
         else:
-            obs = f"Pick failed, item not available or no item found in position {self.position}"
+            obs = f"I fail to pick up, items not available or no item found in position {self.position}"
 
         if len(self._parentMaze.item_positions) == 0:
             self._parentMaze.finish = True
@@ -397,19 +406,23 @@ class agent:
         return obs
 
     def check_dead_end(self):
+
+        if not self.args.remember_dead_end:
+            return
+
         neighbors = self._parentMaze.find_neighbors(self.position)[0]
 
-
-        others_dead_end = set()
-        for agent in self._parentMaze._agents:
-            if agent != self:
-                others_dead_end = others_dead_end.union(set(agent.dead_end))
-
-        if len(neighbors) <= len(set(neighbors) & set(self.dead_end).union(others_dead_end)) + 1:
+        if len(neighbors) <= len(set(neighbors) & set(self.dead_end)) + 1:
             if self.position not in self._parentMaze.item_positions:
-                if len(set(self._parentMaze.find_neighbors(self.position)[0]).intersection(set(self._parentMaze.agent_positions))) == 0:
-                    self.add_dead_end(self.position)
+                # if len(set(self._parentMaze.find_neighbors(self.position)[0]).intersection(set(self._parentMaze.agent_positions))) == 0:
+                self.add_dead_end(self.position)
 
+    def dead_end_in_vision(self):
+        if len(set(self.dead_end).intersection(set(self._look()[0] + [self.position]))) == 0:
+            return "None"
+        else:
+            return ", ".join([str(i) for i in list(set(self.dead_end).intersection(set(self._look()[0] + [self.position])))])
+    
     def kill(self):
         for i in range(len(self._body)):
             self._parentMaze._canvas.delete(self._body[i])
@@ -442,28 +455,44 @@ class Item:
         self.position=(self.x,self.y)
         self.args = args
         self.item_type = args.item_type
+    
+    def info(self):
+        pass
 
 class regularItem(Item):
 
     def __init__(self,parentMaze,x=None,y=None,shape='square',color:COLOR=COLOR.green, args=None):
         super().__init__(parentMaze=parentMaze, x=x,y=y,shape=shape,color=color, args=args)
-        self.figure_agent = agent(self._parentMaze, x=x, y=y, shape="square", filled="center", footprints=False, color=color)
+        if args.visual:
+            self.figure_agent = agent(self._parentMaze, x=x, y=y, shape="square", filled="center", footprints=False, color=color)
+    
+    def info(self):
+        return ""
+
 
 class specialItem(Item):
 
     def __init__(self,parentMaze,x=None,y=None,shape='square',color:COLOR=COLOR.yellow, args=None, agent_list=[]):
         super().__init__(parentMaze=parentMaze, x=x,y=y,shape=shape,color=color, args=args)
         self.agent_list = agent_list
-        self.figure_agent = agent(self._parentMaze, x=x, y=y, shape="square", filled="center", footprints=False, color=color)
-        self.figure_agent.add_text("-".join(self.agent_list))
+        if args.visual:
+            self.figure_agent = agent(self._parentMaze, x=x, y=y, shape="square", filled="center", footprints=False, color=color)
+            self.figure_agent.add_text("-".join(self.agent_list))
+        
+    def info(self):
+        return f"This item has {len(self.agent_list)} phases and the specific sequence of agents that can pick up this item is {'-'.join(self.agent_list)}. Other agents can not pick up this item."
 
 class heavyItem(Item):
 
     def __init__(self,parentMaze,x=None,y=None,shape='square',color:COLOR=COLOR.green, args=None, agents_per_item=1):
         super().__init__(parentMaze=parentMaze, x=x,y=y,shape=shape,color=color, args=args)
         self.agents_per_item = agents_per_item
-        self.figure_agent = agent(self._parentMaze, x=x, y=y, shape="square", filled="big", footprints=False, color=color)
-        self.figure_agent.add_text(str(agents_per_item))
+        if args.visual:
+            self.figure_agent = agent(self._parentMaze, x=x, y=y, shape="square", filled="big", footprints=False, color=color)
+            self.figure_agent.add_text(str(agents_per_item))
+    
+    def info(self):
+        return f"This item is heavy and needs to be picked up by two agents at the item position."
 
 class valuableItem(Item):
 
@@ -471,8 +500,12 @@ class valuableItem(Item):
         super().__init__(parentMaze=parentMaze, x=x,y=y,shape=shape,color=color, args=args)
         self.agent_value = agent_value
         self.value_type = value_type
-        self.figure_agent = agent(self._parentMaze, x=x, y=y, shape="square", filled="center", footprints=False, color=color)
-        self.figure_agent.add_text(str(value_type))
+        if args.visual:
+            self.figure_agent = agent(self._parentMaze, x=x, y=y, shape="square", filled="center", footprints=False, color=color)
+            self.figure_agent.add_text(str(value_type))
+    
+    def info(self):
+        return f"This item's type is {self.value_type}. It has different values depending on which agent picks up the item."
 
 class maze:
     '''
@@ -513,11 +546,11 @@ class maze:
         self.score=0
         self.finish = False
         self.dialogue_history = []
+        self.instruction_history = {}
         self.total_step = 0
 
     
     def find_neighbors(self,position):
-        print(position)
         x, y = position
         possible_next_positions = []
         possible_next_directions = []
@@ -594,6 +627,7 @@ class maze:
         self.item_positions = {}
         random.seed(args.seed)
         self.extra_args = []
+        self.total_scores = args.num_items
         if args.item_type == 'regular':
             self.item = regularItem
             self.extra_args = [{} for _ in range(args.num_items)]
@@ -621,6 +655,7 @@ class maze:
             self.item = heavyItem
             self.extra_args = [{"agents_per_item": args.agents_per_item} for _ in range(args.num_items)]
         elif args.item_type == 'valuable':
+            self.total_scores = args.num_items * args.num_agents
             self.item = valuableItem
 
             base_number = args.num_items // args.value_types
@@ -641,7 +676,7 @@ class maze:
                         "value_type": i+1
                     })
 
-
+        random.seed(args.seed)
         while len(self.item_positions) < self.num_items:
             new_position = (random.randint(1, self.rows), random.randint(1, self.cols))
             if new_position in self.item_positions or new_position == (1, 1):
