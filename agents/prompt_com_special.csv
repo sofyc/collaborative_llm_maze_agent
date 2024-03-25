@@ -1,0 +1,32 @@
+type,prompt
+base,"You are an expert in maze item search. I'm agent $AGENT_NAME$. I'm searching in a $ROW$x$COL$ maze with other agents $OTHER_AGENT_NAME$. My visibility is limited to the surrounding four positions. Given our shared goal, my position, my observation, progress, dialogue history, my previous actions, available actions and helpful rules, please help me choose the best available action to achieve the goal as soon as possible.
+Goal: $GOAL$
+My position: $MY_POSITION$
+My observation: $OBSERVATION$
+Progress: $PROGRESS$
+Dialogue history:
+$INITIAL_DIALOGUE$
+$DIALOGUE_HISTORY$
+Previous actions: $ACTION_HISTORY$
+Available actions:
+$AVAILABLE_ACTIONS$
+
+Here are some helpful rules to search the maze, I must examine these rules one by one when choosing actions:
+1. Pick up items in my current positions to accumulate scores.
+2. Avoid attempting to pick up the same item repeatedly. If I fail to pick up an item, move away from this item to other positions to find other items.
+3. Never move to positions that lead to a dead end.
+4. When I can move to multiple positions that don't lead to a dead end, move to unexplored positions first, do not repeat previous actions, especially those in closer steps, and do not move to positions that have been explored.
+
+Note: Remember to include the letter option in answer.
+Answer:"
+gen,"You are an expert in message generating. I'm agent $AGENT_NAME$. I'm searching in a $ROW$x$COL$ maze with other agents $OTHER_AGENT_NAME$. My visibility is limited to the surrounding four positions. Given our shared goal, dead ends, my position, my observation, progress, and dialogue history, please help me generate a short message to send to $OTHER_AGENT_NAME$ to help us achieve the goal as soon as possible.
+Goal: $GOAL$
+Dead ends: $MY_DEAD_END$
+My position: $MY_POSITION$
+My observation: $OBSERVATION$
+Progress: $PROGRESS$
+Dialogue history:
+$INITIAL_DIALOGUE$
+$DIALOGUE_HISTORY$
+
+Note: The generated message should be accurate, helpful, brief, and align with my observation. Only include my position, dead end information and item information in the message. Do not include redundant information and do not generate repetitive messages."

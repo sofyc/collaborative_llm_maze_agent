@@ -1,0 +1,40 @@
+type,prompt
+base,"You are an expert in maze item search. I'm agent $AGENT_NAME$. I'm searching in a $ROW$x$COL$ maze with other agents $OTHER_AGENT_NAME$. My visibility is limited to the surrounding four positions. Given our shared goal, my position, my observation, progress, dialogue history, my previous actions, available actions and helpful rules, please help me choose the best available action to achieve the goal as soon as possible.
+Goal: $GOAL$
+My position: $MY_POSITION$
+My observation: $OBSERVATION$
+Progress: $PROGRESS$
+Dialogue history:
+$INITIAL_DIALOGUE$
+$DIALOGUE_HISTORY$
+Previous actions: $ACTION_HISTORY$
+Available actions:
+$AVAILABLE_ACTIONS$
+
+Here are some helpful rules to search the maze, I must examine these rules one by one when choosing actions:
+1. Always pick up items in my current positions if possible to accumulate scores.
+2. Never move to positions that lead to a dead end.
+3. When I can move to multiple positions that don't lead to a dead end, do not repeat previous actions and do not move to positions that have been explored.
+
+Note: Remember to include the letter option in answer.
+Answer:"
+gen,"You are an expert in message generating. I'm agent $AGENT_NAME$. I'm searching in a $ROW$x$COL$ maze with other agents $OTHER_AGENT_NAME$. My visibility is limited to the surrounding four positions. Given our shared goal, dead ends confirmed by me, my position, my observation, progress, and dialogue history, please help me generate a short message to send to $OTHER_AGENT_NAME$ to help us achieve the goal as soon as possible.
+Goal: $GOAL$
+Dead ends: $MY_DEAD_END$
+My position: $MY_POSITION$
+My observation: $OBSERVATION$
+Progress: $PROGRESS$
+Dialogue history:
+$INITIAL_DIALOGUE$
+$DIALOGUE_HISTORY$
+
+Note: The generated message should be accurate, helpful, brief, and align with my observation. Only include my position, dead end information and item information in the message. Do not include redundant information and do not generate repetitive messages."
+whe,"You are an expert in decision making. I'm agent $AGENT_NAME$. I'm searching in a $ROW$x$COL$ maze with other agents $OTHER_AGENT_NAME$. My visibility is limited to the surrounding four positions. Given my previous observation, current observation and dialogue history:
+Previous observation: $PREVIOUS_OBSERVATION$
+Current observation: $CURRENT_OBSERVATION$
+
+Dialogue history:
+$INITIAL_DIALOGUE$
+$DIALOGUE_HISTORY$
+
+Combine my current observation and dialogue history, do you think I have new information to share? Note that sending messages will increase the cost, so answer 'yes' only if I have enough new information to send an informative message, answer 'no' if the current dialogue is enough for other agents to search the maze. Just give the answer 'yes' or 'no'."
